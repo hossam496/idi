@@ -1,12 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
 import { motion } from 'framer-motion';
 import Navbar from '../components/layout/Navbar';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
-import Input from '../components/common/Input';
-import Textarea from '../components/common/Textarea';
 import Badge from '../components/common/Badge';
 import SocialLinks from '../components/SocialLinks';
 import { FiArrowRight, FiCheckCircle, FiChevronDown, FiChevronUp, FiBook, FiCpu, FiMessageSquare, FiActivity, FiMapPin, FiPhone, FiMail } from 'react-icons/fi';
@@ -16,13 +13,71 @@ const LandingPage = () => {
   const [activeTab, setActiveTab] = useState('food');
   const [openFaq, setOpenFaq] = useState(null);
 
-  const { register, handleSubmit, reset, formState: { errors, isSubmitSuccessful } } = useForm();
+  // ── Contact form state ────────────────────────────────────────────────────
+  const [contactForm, setContactForm] = useState({ name: '', email: '', message: '' });
+  const [contactErrors, setContactErrors] = useState({});
+  const [isSending, setIsSending] = useState(false);
 
-  const handleContactSubmit = (data) => {
-    // Simulate contact form submission
-    console.log("Contact form submitted:", data);
-    alert("Grazie per averci contattato! Ti risponderemo al più presto. / شكراً لتواصلك معنا! سنرد عليك في أقرب وقت.");
-    reset();
+  const WHATSAPP_NUMBER = '201038382640';
+
+  const setField = (field, value) => {
+    setContactForm(prev => ({ ...prev, [field]: value }));
+    // Clear the error for this field as the user types
+    setContactErrors(prev => ({ ...prev, [field]: '' }));
+  };
+
+  const validateContact = () => {
+    const errs = {};
+    if (!contactForm.name.trim())    errs.name    = 'Il nome è obbligatorio / الاسم مطلوب';
+    if (!contactForm.email.trim())   errs.email   = "L'email è obbligatoria / البريد مطلوب";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactForm.email))
+                                     errs.email   = 'Email non valida / بريد غير صحيح';
+    if (!contactForm.message.trim()) errs.message = 'Il messaggio è obbligatorio / الرسالة مطلوبة';
+    return errs;
+  };
+
+  const handleContactSubmit = (e) => {
+    e.preventDefault();
+    const errs = validateContact();
+    if (Object.keys(errs).length) { setContactErrors(errs); return; }
+
+    setIsSending(true);
+
+    const { name, email, message } = contactForm;
+
+    const text =
+`-----------------------------------
+🇮🇹 Nuovo messaggio dal sito IDI
+
+👤 Nome:
+${name}
+
+📧 Email:
+${email}
+
+💬 Messaggio:
+${message}
+
+-----------------------------------
+🇪🇬 رسالة جديدة من موقع IDI
+
+👤 الاسم:
+${name}
+
+📧 البريد الإلكتروني:
+${email}
+
+💬 الرسالة:
+${message}
+-----------------------------------`;
+
+    const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+
+    // Reset form after opening WhatsApp
+    setContactForm({ name: '', email: '', message: '' });
+    setContactErrors({});
+    setIsSending(false);
   };
 
   const tabs = {
@@ -658,44 +713,82 @@ const LandingPage = () => {
             </div>
 
             <Card className="lg:col-span-7 rounded-3xl p-8 border-brand-border/80 shadow-premium">
-              <form onSubmit={handleSubmit(handleContactSubmit)} className="space-y-5">
+              <form onSubmit={handleContactSubmit} noValidate className="space-y-5">
                 <div className="grid md:grid-cols-2 gap-4">
-                  <Input
-                    id="contact-name"
-                    label="Nome / الاسم"
-                    placeholder="Il tuo nome"
-                    error={errors.name}
-                    {...register('name', { required: 'Il nome è obbligatorio' })}
-                  />
-                  <Input
-                    id="contact-email"
-                    label="Email / البريد الإلكتروني"
-                    placeholder="indirizzo@email.com"
-                    error={errors.email}
-                    {...register('email', { 
-                      required: 'L\'email è obbligatoria',
-                      pattern: {
-                        value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                        message: 'Email non valida'
-                      }
-                    })}
-                  />
-                </div>
-                
-                <Textarea
-                  id="contact-message"
-                  label="Messaggio / الرسالة"
-                  placeholder="Scrivi qui il tuo messaggio..."
-                  error={errors.message}
-                  {...register('message', { required: 'Il messaggio è obbligatorio' })}
-                />
+                  {/* Name */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-brand-navy/70 uppercase tracking-wider">
+                      Nome / الاسم
+                    </label>
+                    <input
+                      type="text"
+                      id="contact-name"
+                      value={contactForm.name}
+                      onChange={e => setField('name', e.target.value)}
+                      placeholder="Il tuo nome"
+                      className={`w-full px-4 py-2.5 border rounded-xl font-sans text-sm bg-white text-brand-navy focus:outline-none focus:ring-2 transition-all ${
+                        contactErrors.name
+                          ? 'border-brand-red focus:ring-brand-red/30'
+                          : 'border-brand-border focus:ring-brand-green/30 focus:border-brand-green'
+                      }`}
+                    />
+                    {contactErrors.name && (
+                      <p className="text-[11px] text-brand-red font-medium">{contactErrors.name}</p>
+                    )}
+                  </div>
 
-                <Button 
-                  type="submit" 
-                  variant="primary" 
+                  {/* Email */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-brand-navy/70 uppercase tracking-wider">
+                      Email / البريد الإلكتروني
+                    </label>
+                    <input
+                      type="email"
+                      id="contact-email"
+                      value={contactForm.email}
+                      onChange={e => setField('email', e.target.value)}
+                      placeholder="indirizzo@email.com"
+                      className={`w-full px-4 py-2.5 border rounded-xl font-sans text-sm bg-white text-brand-navy focus:outline-none focus:ring-2 transition-all ${
+                        contactErrors.email
+                          ? 'border-brand-red focus:ring-brand-red/30'
+                          : 'border-brand-border focus:ring-brand-green/30 focus:border-brand-green'
+                      }`}
+                    />
+                    {contactErrors.email && (
+                      <p className="text-[11px] text-brand-red font-medium">{contactErrors.email}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Message */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-brand-navy/70 uppercase tracking-wider">
+                    Messaggio / الرسالة
+                  </label>
+                  <textarea
+                    id="contact-message"
+                    value={contactForm.message}
+                    onChange={e => setField('message', e.target.value)}
+                    placeholder="Scrivi qui il tuo messaggio..."
+                    rows={4}
+                    className={`w-full px-4 py-2.5 border rounded-xl font-sans text-sm bg-white text-brand-navy focus:outline-none focus:ring-2 transition-all resize-none ${
+                      contactErrors.message
+                        ? 'border-brand-red focus:ring-brand-red/30'
+                        : 'border-brand-border focus:ring-brand-green/30 focus:border-brand-green'
+                    }`}
+                  />
+                  {contactErrors.message && (
+                    <p className="text-[11px] text-brand-red font-medium">{contactErrors.message}</p>
+                  )}
+                </div>
+
+                <Button
+                  type="submit"
+                  variant="primary"
+                  disabled={isSending}
                   className="w-full py-3 justify-center text-sm font-bold tracking-wide"
                 >
-                  Invia Messaggio / إرسال الرسالة
+                  {isSending ? 'Apertura WhatsApp...' : 'Invia Messaggio / إرسال الرسالة'}
                 </Button>
               </form>
             </Card>
