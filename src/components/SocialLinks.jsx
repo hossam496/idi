@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FaFacebook, FaYoutube, FaWhatsapp, FaTiktok } from 'react-icons/fa';
+import { FaFacebook, FaInstagram, FaYoutube, FaWhatsapp, FaTiktok } from 'react-icons/fa';
 import { socialLinks } from '../config/socialLinks';
 
 /**
@@ -14,16 +14,17 @@ import { socialLinks } from '../config/socialLinks';
 
 const ITEMS = [
   { key: 'facebook',  Icon: FaFacebook,  label: 'Facebook',  color: '#1877F2' },
-  { key: 'youtube',   Icon: FaYoutube,   label: 'YouTube',   color: '#FF0000' },
+  { key: 'instagram', Icon: FaInstagram, label: 'Instagram', color: '#E1306C' },
   { key: 'tiktok',    Icon: FaTiktok,    label: 'TikTok',    color: '#010101' },
   { key: 'whatsapp',  Icon: FaWhatsapp,  label: 'WhatsApp',  color: '#25D366' },
+  { key: 'youtube',   Icon: FaYoutube,   label: 'YouTube',   color: '#FF0000' },
 ];
 
 function SocialIcon({ item, size, showLabels, variant }) {
   const [hovered, setHovered] = useState(false);
   const isLight = variant === 'light';
-  const href = socialLinks[item.key] || '#';
-  const isDisabled = !socialLinks[item.key];
+  const href = socialLinks[item.key] || null;
+  const isDisabled = !href;
 
   const wrapperStyle = isLight
     ? {
