@@ -1,14 +1,28 @@
 import React, { useState } from 'react';
 import { useChat } from '../../context/ChatContext';
-import { FiPlus, FiMessageSquare, FiBookOpen, FiBookmark, FiUser, FiSettings, FiTrash2, FiVolume2, FiGlobe } from 'react-icons/fi';
+import { useLearning } from '../../context/LearningContext';
+import { FiPlus, FiMessageSquare, FiBookOpen, FiBookmark, FiHeart, FiBook, FiSettings, FiVolume2, FiGlobe } from 'react-icons/fi';
 import Button from '../common/Button';
 import Dialog from '../common/Dialog';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
   const { chats, activeChatId, selectChat, startNewChat } = useChat();
+  const { grammarList, vocabularyList, favoritesCount } = useLearning();
+  const navigate   = useNavigate();
+  const location   = useLocation();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [voiceGender, setVoiceGender] = useState('female');
-  const [speechSpeed, setSpeechSpeed] = useState('1.0');
+  const [voiceGender, setVoiceGender]       = useState('female');
+  const [speechSpeed, setSpeechSpeed]       = useState('1.0');
+
+  const verbCount = vocabularyList.filter(v => v.partOfSpeech === 'Verbo').length;
+
+  const navLinks = [
+    { path: '/grammar',    icon: FiBookOpen,  label: 'Grammatica',  count: grammarList.length },
+    { path: '/vocabulary', icon: FiBook,      label: 'Vocabolario', count: vocabularyList.length },
+    { path: '/vocabulary', icon: FiBookmark,  label: 'Verbi',       count: verbCount, sub: true },
+    { path: '/grammar',    icon: FiHeart,     label: 'Preferiti',   count: favoritesCount, sub: true },
+  ];
 
   const handleNewChat = () => {
     startNewChat();
@@ -69,9 +83,45 @@ const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
               })}
             </div>
           </div>
-        </div>
+          {/* Learning Library Counters */}
+          <div className="flex flex-col space-y-1">
+            <h4 className="text-[10px] uppercase tracking-widest font-bold text-brand-navy/55 px-2 mb-1">
+              La Mia Libreria
+            </h4>
+            {navLinks.filter(l => !l.sub).map(({ path, icon: Icon, label, count }) => (
+              <button
+                key={label}
+                onClick={() => { navigate(path); if (setIsMobileOpen) setIsMobileOpen(false); }}
+                className={`w-full text-left px-3 py-2.5 rounded-xl transition-all flex items-center justify-between cursor-pointer group ${
+                  location.pathname === path
+                    ? 'bg-brand-navy/5 text-brand-navy'
+                    : 'text-brand-navy/65 hover:bg-brand-navy/5 hover:text-brand-navy'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Icon size={15} className={location.pathname === path ? 'text-brand-green' : 'text-brand-navy/50 group-hover:text-brand-green'} />
+                  <span className="text-xs font-semibold">{label}</span>
+                </div>
+                {count > 0 && (
+                  <span className="text-[10px] font-bold bg-brand-green/10 text-brand-green px-2 py-0.5 rounded-full min-w-[22px] text-center">
+                    {count}
+                  </span>
+                )}
+              </button>
+            ))}
+            {/* Sub-counters row */}
+            <div className="flex gap-2 px-3 pt-1 pb-0.5">
+              {navLinks.filter(l => l.sub).map(({ icon: Icon, label, count }) => (
+                <div key={label} className="flex items-center gap-1 text-[10px] text-brand-navy/45 font-semibold">
+                  <Icon size={11} className="text-brand-navy/40" />
+                  <span>{label}</span>
+                  <span className="font-bold text-brand-navy/60">{count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
 
-        {/* Bottom Navigation & Settings */}
+        </div>
         <div className="p-4 border-t border-brand-border space-y-1">
           <button
             onClick={() => setIsSettingsOpen(true)}

@@ -472,7 +472,7 @@ const LandingPage = () => {
           </Card>
           <Card className="p-6 text-center space-y-2">
             <FiCheckCircle className="text-brand-green mx-auto" size={28} />
-            <h4 className="text-2xl font-bold text-brand-navy font-serif">A1-B2</h4>
+            <h4 className="text-2xl font-bold text-brand-navy font-serif">A1-C2</h4>
             <p className="text-[10px] text-brand-textSecondary uppercase font-bold tracking-wider">Livelli supportati</p>
           </Card>
         </div>
