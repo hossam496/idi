@@ -8,8 +8,8 @@ import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import Textarea from '../components/common/Textarea';
 import Badge from '../components/common/Badge';
+import SocialLinks from '../components/SocialLinks';
 import { FiArrowRight, FiCheckCircle, FiChevronDown, FiChevronUp, FiBook, FiCpu, FiMessageSquare, FiActivity, FiMapPin, FiPhone, FiMail } from 'react-icons/fi';
-import { FaInstagram, FaFacebookF, FaYoutube, FaTwitter } from 'react-icons/fa';
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -591,6 +591,40 @@ const LandingPage = () => {
         </div>
       </motion.section>
 
+      {/* Follow Us */}
+      <motion.section
+        {...fadeUp}
+        className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-10"
+      >
+        <div className="max-w-2xl mx-auto space-y-4">
+          <Badge variant="green" className="px-4 py-1.5 text-xs tracking-wider">
+            🇮🇹 Community IDI
+          </Badge>
+          <h2 className="font-serif text-3xl sm:text-4xl font-bold text-brand-navy">
+            Seguici sui Social 📲
+          </h2>
+          <p className="text-sm text-brand-textSecondary leading-relaxed">
+            Resta aggiornato su nuovi contenuti, esercizi quotidiani e risorse gratuite.
+            Unisciti alla comunità dell'Istituto Di Italiano!
+          </p>
+          <p className="text-xs text-brand-textSecondary/70 font-sans">
+            ابق على اطلاع بأحدث المحتويات والتمارين اليومية والموارد المجانية. انضم إلى مجتمع معهد الإيطالية!
+          </p>
+          <div className="h-1 w-16 bg-brand-green mx-auto rounded" />
+        </div>
+
+        <div className="flex justify-center">
+          <SocialLinks size={28} showLabels variant="brand" />
+        </div>
+
+        {/* Italian-flag accent strip */}
+        <div className="flex justify-center gap-0 mx-auto w-24 rounded-full overflow-hidden h-1.5">
+          <div className="flex-1 bg-[#008C45]" />
+          <div className="flex-1 bg-[#F4F4F4]" />
+          <div className="flex-1 bg-[#CD212A]" />
+        </div>
+      </motion.section>
+
       {/* Contact Us */}
       <motion.section 
         {...fadeUp}
@@ -671,55 +705,76 @@ const LandingPage = () => {
       </motion.section>
 
       {/* Footer */}
-      <footer className="bg-brand-navy text-white py-12 border-t border-brand-navy/10 font-sans">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid md:grid-cols-4 gap-8 text-left">
-          
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2.5">
-              <svg width="28" height="28" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M8 32V20C8 13.3726 13.3726 8 20 8C26.6274 8 32 13.3726 32 20V32" stroke="#0B8F52" strokeWidth="4" strokeLinecap="round" />
-                <path d="M14 32V22C14 18.6863 16.6863 16 20 16C23.3137 16 26 18.6863 26 22V32" stroke="#C62828" strokeWidth="3" strokeLinecap="round" />
-                <rect x="5" y="32" width="8" height="4" rx="1" fill="#FFFFFF" />
-                <rect x="27" y="32" width="8" height="4" rx="1" fill="#FFFFFF" />
-                <rect x="11" y="32" width="18" height="4" rx="1" fill="#FFFFFF" />
-              </svg>
-              <h3 className="font-serif text-lg font-bold">Istituto Di Italiano</h3>
+      <footer className="bg-brand-navy text-white py-14 border-t border-white/5 font-sans">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+          {/* Main footer grid */}
+          <div className="grid md:grid-cols-4 gap-10 text-left pb-10 border-b border-white/10">
+
+            {/* Brand column */}
+            <div className="space-y-4 md:col-span-1">
+              <div className="flex items-center space-x-2.5">
+                <svg width="28" height="28" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M8 32V20C8 13.3726 13.3726 8 20 8C26.6274 8 32 13.3726 32 20V32" stroke="#0B8F52" strokeWidth="4" strokeLinecap="round" />
+                  <path d="M14 32V22C14 18.6863 16.6863 16 20 16C23.3137 16 26 18.6863 26 22V32" stroke="#C62828" strokeWidth="3" strokeLinecap="round" />
+                  <rect x="5" y="32" width="8" height="4" rx="1" fill="#FFFFFF" />
+                  <rect x="27" y="32" width="8" height="4" rx="1" fill="#FFFFFF" />
+                  <rect x="11" y="32" width="18" height="4" rx="1" fill="#FFFFFF" />
+                </svg>
+                <h3 className="font-serif text-lg font-bold">Istituto Di Italiano</h3>
+              </div>
+              <p className="text-[11px] text-white/55 leading-relaxed">
+                Un ponte culturale e formativo guidato dall'Intelligenza Artificiale, per imparare l'italiano con eleganza e semplicità.
+              </p>
             </div>
-            <p className="text-[11px] text-white/60 leading-relaxed">
-              Un ponte culturale e formativo guidato dall'Intelligenza Artificiale, per imparare l'italiano con eleganza e semplicità.
-            </p>
-          </div>
 
-          <div className="space-y-3">
-            <h4 className="text-xs uppercase font-bold tracking-wider text-brand-green">Link Utili</h4>
-            <ul className="space-y-1.5 text-xs text-white/70">
-              <li><a href="#about" className="hover:text-white transition-colors">Chi Siamo</a></li>
-              <li><a href="#courses" className="hover:text-white transition-colors">I Nostri Corsi</a></li>
-              <li><a href="#privacy" className="hover:text-white transition-colors">Privacy Policy</a></li>
-              <li><a href="#terms" className="hover:text-white transition-colors">Termini di Servizio</a></li>
-            </ul>
-          </div>
-
-          <div className="space-y-3">
-            <h4 className="text-xs uppercase font-bold tracking-wider text-brand-green">Tecnologia</h4>
-            <ul className="space-y-1.5 text-xs text-white/70">
-              <li><span className="opacity-80">AI Conversational Engine</span></li>
-              <li><span className="opacity-80">Spiegazioni Bilingue Dinamiche</span></li>
-              <li><span className="opacity-80">Modello di Estrazione Grammatica</span></li>
-            </ul>
-          </div>
-
-          <div className="space-y-4">
-            <h4 className="text-xs uppercase font-bold tracking-wider text-brand-green">Seguici</h4>
-            <div className="flex space-x-3">
-              <a href="#fb" className="w-8 h-8 rounded-full bg-white/10 hover:bg-brand-green flex items-center justify-center transition-all cursor-pointer"><FaFacebookF size={14} /></a>
-              <a href="#ig" className="w-8 h-8 rounded-full bg-white/10 hover:bg-brand-green flex items-center justify-center transition-all cursor-pointer"><FaInstagram size={14} /></a>
-              <a href="#yt" className="w-8 h-8 rounded-full bg-white/10 hover:bg-brand-green flex items-center justify-center transition-all cursor-pointer"><FaYoutube size={14} /></a>
-              <a href="#tw" className="w-8 h-8 rounded-full bg-white/10 hover:bg-brand-green flex items-center justify-center transition-all cursor-pointer"><FaTwitter size={14} /></a>
+            {/* Quick Links */}
+            <div className="space-y-3">
+              <h4 className="text-xs uppercase font-bold tracking-wider text-[#C9A227]">Link Utili</h4>
+              <ul className="space-y-2 text-xs text-white/65">
+                <li><a href="#about"   className="hover:text-white transition-colors">Chi Siamo</a></li>
+                <li><a href="#courses" className="hover:text-white transition-colors">I Nostri Corsi</a></li>
+                <li><a href="#privacy" className="hover:text-white transition-colors">Privacy Policy</a></li>
+                <li><a href="#terms"   className="hover:text-white transition-colors">Termini di Servizio</a></li>
+              </ul>
             </div>
-            <p className="text-[10px] text-white/50 pt-2 border-t border-white/10">
-              &copy; {new Date().getFullYear()} IDI. All rights reserved.
-            </p>
+
+            {/* Contact */}
+            <div className="space-y-3">
+              <h4 className="text-xs uppercase font-bold tracking-wider text-[#C9A227]">Contatti</h4>
+              <ul className="space-y-2.5 text-xs text-white/65">
+                <li className="flex items-center gap-2">
+                  <FiMapPin size={13} className="text-brand-green shrink-0" />
+                  <span>Via dei Fori Imperiali, Roma</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <FiPhone size={13} className="text-brand-green shrink-0" />
+                  <span>+39 06 1234567</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <FiMail size={13} className="text-brand-green shrink-0" />
+                  <span>info@idi.it</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Social Media */}
+            <div className="space-y-4">
+              <h4 className="text-xs uppercase font-bold tracking-wider text-[#C9A227]">Seguici</h4>
+              <SocialLinks size={18} variant="light" />
+            </div>
+
+          </div>
+
+          {/* Bottom bar */}
+          <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-[10px] text-white/40">
+            <span>&copy; {new Date().getFullYear()} Istituto Di Italiano — IDI. Tutti i diritti riservati.</span>
+            {/* Italian flag strip */}
+            <div className="flex gap-0 w-12 rounded-full overflow-hidden h-1">
+              <div className="flex-1 bg-[#008C45]" />
+              <div className="flex-1 bg-[#F4F4F4]/60" />
+              <div className="flex-1 bg-[#CD212A]" />
+            </div>
           </div>
 
         </div>
