@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-brand-cream text-brand-textPrimary font-sans antialiased selection:bg-brand-green/20 selection:text-brand-green;
+  }
+}
+
+/* Custom Scrollbar for chat and scrollable elements */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(17, 28, 68, 0.1);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(17, 28, 68, 0.25);
+}
+
+/* Custom roman arch divider utility */
+.roman-divider {
+  position: relative;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #E8E8E8 20%, #E8E8E8 80%, transparent);
+}
+
+.roman-divider::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #FAF8F5;
+  border: 2px solid #0B8F52;
+}
+
+/* Shimmer styling for custom skeleton */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(90deg, #f0ede9 25%, #e6e2dd 50%, #f0ede9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
