@@ -16,8 +16,8 @@ const Login = () => {
 
   const { register, handleSubmit, formState: { errors } } = useForm({
     defaultValues: {
-      email: 'studente@idi.it',
-      password: 'italiano123'
+      email: '',
+      password: ''
     }
   });
 
@@ -64,18 +64,6 @@ const Login = () => {
             <span className="text-[11px] text-brand-textSecondary/60 text-right dir-rtl font-sans">
               تعلم اللغة الإيطالية مع مدرس ذكي
             </span>
-          </div>
-        </div>
-
-        {/* Demo Credentials Info Box */}
-        <div className="mb-6 p-4 bg-brand-navy/5 border border-brand-navy/10 rounded-2xl flex items-start space-x-3">
-          <FiInfo className="text-brand-navy shrink-0 mt-0.5" size={16} />
-          <div className="text-xs text-brand-navy">
-            <p className="font-bold uppercase tracking-wider text-[10px] text-brand-navy/70 mb-1">
-              Credenziali Demo / بيانات الدخول التجريبية
-            </p>
-            <p>Email: <span className="font-mono font-semibold">studente@idi.it</span></p>
-            <p>Password: <span className="font-mono font-semibold">italiano123</span></p>
           </div>
         </div>
 
