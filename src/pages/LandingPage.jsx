@@ -58,17 +58,6 @@ ${email}
 💬 Messaggio:
 ${message}
 
------------------------------------
-🇪🇬 رسالة جديدة من موقع IDI
-
-👤 الاسم:
-${name}
-
-📧 البريد الإلكتروني:
-${email}
-
-💬 الرسالة:
-${message}
 -----------------------------------`;
 
     const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
