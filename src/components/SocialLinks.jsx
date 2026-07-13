@@ -17,7 +17,6 @@ const ITEMS = [
   { key: 'instagram', Icon: FaInstagram, label: 'Instagram', color: '#E1306C' },
   { key: 'tiktok',    Icon: FaTiktok,    label: 'TikTok',    color: '#010101' },
   { key: 'whatsapp',  Icon: FaWhatsapp,  label: 'WhatsApp',  color: '#25D366' },
-  { key: 'youtube',   Icon: FaYoutube,   label: 'YouTube',   color: '#FF0000' },
 ];
 
 function SocialIcon({ item, size, showLabels, variant }) {
