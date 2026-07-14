@@ -694,9 +694,6 @@ ${message}
                   <FiPhone className="text-brand-green" size={18} />
                   <span>01038382640</span>
                 </div>
-                <div className="flex items-center space-x-3 text-brand-navy text-sm font-medium">
-                  <FiMail className="text-brand-green" size={18} />
-                </div>
               </div>
             </div>
 
@@ -831,9 +828,6 @@ ${message}
                 <li className="flex items-center gap-2">
                   <FiPhone size={13} className="text-brand-green shrink-0" />
                   <span>01038382640</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <FiMail size={13} className="text-brand-green shrink-0" />
                 </li>
               </ul>
             </div>
