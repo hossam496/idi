@@ -792,13 +792,13 @@ ${message}
             {/* Brand column */}
             <div className="space-y-4 md:col-span-1">
               <div className="flex items-center space-x-2.5">
-                <svg width="28" height="28" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                {/* <svg width="28" height="28" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M8 32V20C8 13.3726 13.3726 8 20 8C26.6274 8 32 13.3726 32 20V32" stroke="#0B8F52" strokeWidth="4" strokeLinecap="round" />
                   <path d="M14 32V22C14 18.6863 16.6863 16 20 16C23.3137 16 26 18.6863 26 22V32" stroke="#C62828" strokeWidth="3" strokeLinecap="round" />
                   <rect x="5" y="32" width="8" height="4" rx="1" fill="#FFFFFF" />
                   <rect x="27" y="32" width="8" height="4" rx="1" fill="#FFFFFF" />
                   <rect x="11" y="32" width="18" height="4" rx="1" fill="#FFFFFF" />
-                </svg>
+                </svg> */}
                 <h3 className="font-serif text-lg font-bold">Istituto Di Italiano</h3>
               </div>
               <p className="text-[11px] text-white/55 leading-relaxed">
