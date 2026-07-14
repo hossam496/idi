@@ -692,11 +692,10 @@ ${message}
                 </div>
                 <div className="flex items-center space-x-3 text-brand-navy text-sm font-medium">
                   <FiPhone className="text-brand-green" size={18} />
-                  <span>+39 06 1234567</span>
+                  <span>01038382640</span>
                 </div>
                 <div className="flex items-center space-x-3 text-brand-navy text-sm font-medium">
                   <FiMail className="text-brand-green" size={18} />
-                  <span>info@idi.it</span>
                 </div>
               </div>
             </div>
@@ -831,11 +830,10 @@ ${message}
                 </li>
                 <li className="flex items-center gap-2">
                   <FiPhone size={13} className="text-brand-green shrink-0" />
-                  <span>+39 06 1234567</span>
+                  <span>01038382640</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <FiMail size={13} className="text-brand-green shrink-0" />
-                  <span>info@idi.it</span>
                 </li>
               </ul>
             </div>
