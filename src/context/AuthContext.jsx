@@ -1,206 +1,107 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { authAPI } from '../services/api';
 
 const AuthContext = createContext(null);
 
-/**
- * Simple deterministic hash of a string (djb2 algorithm).
- * Produces the same numeric hash for the same email every time,
- * so a user who logs in twice always gets the same ID and data.
- */
-function hashString(str) {
-  let hash = 5381;
-  for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) + hash) + str.charCodeAt(i);
-    hash = hash & hash; // Convert to 32-bit integer
-  }
-  return Math.abs(hash).toString(36);
-}
-
-/**
- * Load the user registry from localStorage.
- * Format: { "email@example.com": { id, name, password, ... }, ... }
- */
-function loadRegistry() {
-  try {
-    const raw = localStorage.getItem('idi_registered_users');
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
-}
-
-function saveRegistry(registry) {
-  localStorage.setItem('idi_registered_users', JSON.stringify(registry));
-}
-
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser]       = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError]     = useState(null);
 
+  // ── Bootstrap: restore session from localStorage token ──────────────────
   useEffect(() => {
-    // Check if user is logged in from localStorage on mount
+    const token      = localStorage.getItem('idi_token');
     const storedUser = localStorage.getItem('idi_user');
-    const token = localStorage.getItem('idi_token');
-    if (storedUser && token) {
+
+    if (token && storedUser) {
+      // Optimistically restore the user, then verify with the server
       setUser(JSON.parse(storedUser));
+      authAPI.me()
+        .then(res => {
+          const fresh = res.data.data.user;
+          setUser(fresh);
+          localStorage.setItem('idi_user', JSON.stringify(fresh));
+        })
+        .catch(() => {
+          // Token expired / invalid — clear everything
+          localStorage.removeItem('idi_token');
+          localStorage.removeItem('idi_user');
+          setUser(null);
+        })
+        .finally(() => setLoading(false));
+    } else {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
+  // ── Login ────────────────────────────────────────────────────────────────
   const login = async (email, password) => {
     setLoading(true);
     setError(null);
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 800));
+      const res         = await authAPI.login({ email, password });
+      const { user: u, accessToken } = res.data.data;
 
-      // Validation
-      if (!email || !password) {
-        throw new Error('Inserire email e password.');
-      }
-
-      const normalizedEmail = email.trim().toLowerCase();
-      const registry = loadRegistry();
-
-      // Check if this email is registered
-      if (registry[normalizedEmail]) {
-        // Verify password
-        if (registry[normalizedEmail].password !== password) {
-          throw new Error('Password non corretta. / كلمة المرور غير صحيحة.');
-        }
-        // Return existing user with their stable ID
-        const existingUser = {
-          id: registry[normalizedEmail].id,
-          name: registry[normalizedEmail].name,
-          email: normalizedEmail,
-          avatar: registry[normalizedEmail].avatar || null,
-          role: 'student',
-          joinedDate: registry[normalizedEmail].joinedDate,
-        };
-        const mockToken = `mock-jwt-token-${existingUser.id}`;
-
-        localStorage.setItem('idi_user', JSON.stringify(existingUser));
-        localStorage.setItem('idi_token', mockToken);
-        setUser(existingUser);
-        return existingUser;
-      }
-
-      // Not registered — auto-register for easy evaluation (demo mode)
-      const userId = `user_${hashString(normalizedEmail)}`;
-      const mockUser = {
-        id: userId,
-        name: normalizedEmail.split('@')[0].replace(/[._]/g, ' '),
-        email: normalizedEmail,
-        avatar: null,
-        role: 'student',
-        joinedDate: new Date().toISOString().split('T')[0],
-      };
-      const mockToken = `mock-jwt-token-${userId}`;
-
-      // Save to registry
-      registry[normalizedEmail] = {
-        id: userId,
-        name: mockUser.name,
-        password: password,
-        avatar: null,
-        joinedDate: mockUser.joinedDate,
-      };
-      saveRegistry(registry);
-
-      localStorage.setItem('idi_user', JSON.stringify(mockUser));
-      localStorage.setItem('idi_token', mockToken);
-      setUser(mockUser);
-      return mockUser;
+      localStorage.setItem('idi_token', accessToken);
+      localStorage.setItem('idi_user',  JSON.stringify(u));
+      setUser(u);
+      return u;
     } catch (err) {
-      setError(err.message || 'Credenziali non valide.');
-      throw err;
+      const msg = err.response?.data?.message || 'Credenziali non valide.';
+      setError(msg);
+      throw new Error(msg);
     } finally {
       setLoading(false);
     }
   };
 
+  // ── Register ─────────────────────────────────────────────────────────────
   const register = async (name, email, password) => {
     setLoading(true);
     setError(null);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const res         = await authAPI.register({ name, email, password });
+      const { user: u, accessToken } = res.data.data;
 
-      if (!name || !email || !password) {
-        throw new Error('Compilare tutti i campi.');
-      }
-
-      const normalizedEmail = email.trim().toLowerCase();
-      const registry = loadRegistry();
-
-      // Check if already registered
-      if (registry[normalizedEmail]) {
-        throw new Error('Questa email è già registrata. Effettua il login. / هذا البريد مسجل بالفعل. قم بتسجيل الدخول.');
-      }
-
-      // Deterministic ID from email
-      const userId = `user_${hashString(normalizedEmail)}`;
-      const mockUser = {
-        id: userId,
-        name: name,
-        email: normalizedEmail,
-        avatar: null,
-        role: 'student',
-        joinedDate: new Date().toISOString().split('T')[0],
-      };
-      const mockToken = `mock-jwt-token-${userId}`;
-
-      // Save to registry
-      registry[normalizedEmail] = {
-        id: userId,
-        name: name,
-        password: password,
-        avatar: null,
-        joinedDate: mockUser.joinedDate,
-      };
-      saveRegistry(registry);
-
-      localStorage.setItem('idi_user', JSON.stringify(mockUser));
-      localStorage.setItem('idi_token', mockToken);
-      setUser(mockUser);
-      return mockUser;
+      localStorage.setItem('idi_token', accessToken);
+      localStorage.setItem('idi_user',  JSON.stringify(u));
+      setUser(u);
+      return u;
     } catch (err) {
-      setError(err.message || 'Errore durante la registrazione.');
-      throw err;
+      const msg = err.response?.data?.message || 'Errore durante la registrazione.';
+      setError(msg);
+      throw new Error(msg);
     } finally {
       setLoading(false);
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('idi_user');
-    localStorage.removeItem('idi_token');
-    setUser(null);
+  // ── Logout ───────────────────────────────────────────────────────────────
+  const logout = async () => {
+    try {
+      await authAPI.logout?.();
+    } catch {
+      // best-effort
+    } finally {
+      localStorage.removeItem('idi_token');
+      localStorage.removeItem('idi_user');
+      setUser(null);
+    }
   };
 
+  // ── Update Profile ────────────────────────────────────────────────────────
   const updateProfile = async (updatedData) => {
     setLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 600));
-      const updatedUser = { ...user, ...updatedData };
-      localStorage.setItem('idi_user', JSON.stringify(updatedUser));
-
-      // Also update the registry entry
-      const registry = loadRegistry();
-      if (registry[user.email]) {
-        registry[user.email] = {
-          ...registry[user.email],
-          name: updatedUser.name,
-          avatar: updatedUser.avatar,
-        };
-        saveRegistry(registry);
-      }
-
-      setUser(updatedUser);
-      return updatedUser;
+      const res     = await authAPI.updateProfile(updatedData);
+      const fresh   = res.data.data.user;
+      localStorage.setItem('idi_user', JSON.stringify(fresh));
+      setUser(fresh);
+      return fresh;
     } catch (err) {
-      setError('Impossibile aggiornare il profilo.');
-      throw err;
+      const msg = err.response?.data?.message || 'Impossibile aggiornare il profilo.';
+      setError(msg);
+      throw new Error(msg);
     } finally {
       setLoading(false);
     }
@@ -225,9 +126,7 @@ export const AuthProvider = ({ children }) => {
 };
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth deve essere utilizzato all\'interno di un AuthProvider');
-  }
-  return context;
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth deve essere utilizzato all'interno di un AuthProvider");
+  return ctx;
 };

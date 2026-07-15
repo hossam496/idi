@@ -1,131 +1,89 @@
 /**
- * Grammar Service — single source of truth for all grammar CRUD operations.
- *
- * Currently backed by localStorage (via extractGrammar utils + storage service).
- * To migrate to a backend, replace each function body with an API call.
- * No React component needs to change — only this file.
- *
- * Example future migration:
- *   export const getAll  = (userId) => api.get(`/grammar?user=${userId}`);
- *   export const create  = (userId, item) => api.post('/grammar', item);
- *   export const update  = (userId, id, patch) => api.put(`/grammar/${id}`, patch);
- *   export const remove  = (userId, id) => api.delete(`/grammar/${id}`);
+ * Grammar Service — migrated to backend API.
+ * All operations now call the real REST API instead of localStorage.
+ * The function signatures are unchanged so no component needs to update.
  */
 
-import { loadGrammar, updateGrammarStorage } from '../utils/extractGrammar';
+import { grammarAPI } from './api';
 
-/** Unique ID generator. */
-const newId = () => `grammar_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-
-/** ISO date string (YYYY-MM-DD). */
-const today = () => new Date().toISOString().split('T')[0];
+// ── Read ──────────────────────────────────────────────────────────────────────
 
 /**
- * Fetch all grammar items for a user.
- * @param {string} userId
- * @returns {Array}
+ * Fetch all grammar items for the authenticated user.
+ * Returns a Promise<Array>.
  */
-export const getAll = (userId) => loadGrammar(userId) ?? [];
+export const getAll = async () => {
+  const res = await grammarAPI.getAll();
+  return res.data.data.grammar ?? [];
+};
+
+/**
+ * Fetch a single grammar item by id.
+ */
+export const getById = async (id) => {
+  const res = await grammarAPI.getById(id);
+  return res.data.data.grammar;
+};
+
+// ── Write ─────────────────────────────────────────────────────────────────────
 
 /**
  * Create a new grammar item.
- * Deduplicates by title (case-insensitive).
- * @param {string} userId
- * @param {object} fields  — raw form values
- * @returns {{ ok: boolean, item?: object, error?: string }}
+ * @param {object} fields
+ * @returns {Promise<{ ok: boolean, item?: object, error?: string }>}
  */
-export const create = (userId, fields) => {
-  const list = getAll(userId);
-  const titleLower = (fields.title || '').trim().toLowerCase();
-
-  if (!titleLower) return { ok: false, error: 'Il titolo è obbligatorio.' };
-  if (list.some((g) => g.title.toLowerCase() === titleLower)) {
-    return { ok: false, error: 'Questa regola esiste già nel tuo archivio.' };
+export const create = async (fields) => {
+  try {
+    const res = await grammarAPI.create(fields);
+    return { ok: true, item: res.data.data.grammar };
+  } catch (err) {
+    const message = err.response?.data?.message || 'Errore durante il salvataggio.';
+    return { ok: false, error: message };
   }
-
-  const item = buildItem(fields);
-  updateGrammarStorage(userId, [item, ...list]);
-  return { ok: true, item };
 };
 
 /**
  * Update an existing grammar item by id.
- * @param {string} userId
  * @param {string} id
- * @param {object} fields  — updated form values
- * @returns {{ ok: boolean, item?: object, error?: string }}
+ * @param {object} fields
+ * @returns {Promise<{ ok: boolean, item?: object, error?: string }>}
  */
-export const update = (userId, id, fields) => {
-  const list = getAll(userId);
-  const idx = list.findIndex((g) => g.id === id);
-  if (idx === -1) return { ok: false, error: 'Regola non trovata.' };
-
-  const updated = { ...list[idx], ...buildItem(fields), id };
-  const next = [...list];
-  next[idx] = updated;
-  updateGrammarStorage(userId, next);
-  return { ok: true, item: updated };
+export const update = async (id, fields) => {
+  try {
+    const res = await grammarAPI.update(id, fields);
+    return { ok: true, item: res.data.data.grammar };
+  } catch (err) {
+    const message = err.response?.data?.message || 'Errore durante l\'aggiornamento.';
+    return { ok: false, error: message };
+  }
 };
 
 /**
  * Delete a grammar item by id.
- * @param {string} userId
  * @param {string} id
- * @returns {{ ok: boolean }}
+ * @returns {Promise<{ ok: boolean }>}
  */
-export const remove = (userId, id) => {
-  const list = getAll(userId).filter((g) => g.id !== id);
-  updateGrammarStorage(userId, list);
-  return { ok: true };
+export const remove = async (id) => {
+  try {
+    await grammarAPI.remove(id);
+    return { ok: true };
+  } catch (err) {
+    const message = err.response?.data?.message || 'Errore durante l\'eliminazione.';
+    return { ok: false, error: message };
+  }
 };
 
 /**
- * Toggle the favorite flag for a grammar item.
- * @param {string} userId
+ * Toggle the favorite flag on a grammar item.
  * @param {string} id
- * @returns {{ ok: boolean }}
+ * @returns {Promise<{ ok: boolean, item?: object }>}
  */
-export const toggleFavorite = (userId, id) => {
-  const list = getAll(userId);
-  const next = list.map((g) => (g.id === id ? { ...g, favorite: !g.favorite } : g));
-  updateGrammarStorage(userId, next);
-  return { ok: true };
+export const toggleFavorite = async (id) => {
+  try {
+    const res = await grammarAPI.toggleFavorite(id);
+    return { ok: true, item: res.data.data.grammar };
+  } catch (err) {
+    const message = err.response?.data?.message || 'Errore nel toggle preferito.';
+    return { ok: false, error: message };
+  }
 };
-
-// ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Normalise raw form fields into the canonical grammar item shape.
- * Supports both AI-sourced and manually-entered items.
- */
-function buildItem(fields) {
-  const examples = (fields.examples || [])
-    .filter((ex) => (ex.it || '').trim())
-    .map((ex) => ({ it: ex.it.trim(), ar: (ex.ar || '').trim() }));
-
-  const tags = Array.isArray(fields.tags)
-    ? fields.tags.filter(Boolean)
-    : (fields.tags || '')
-        .split(',')
-        .map((t) => t.trim())
-        .filter(Boolean);
-
-  return {
-    id: fields.id || newId(),
-    title: (fields.title || '').trim(),
-    arabicTitle: (fields.arabicTitle || '').trim(),
-    italianName: (fields.title || '').trim(),
-    // Support both field naming conventions (AI vs manual)
-    explanationItalian: (fields.italianExplanation || fields.explanationItalian || '').trim(),
-    explanationArabic: (fields.arabicExplanation || fields.explanationArabic || '').trim(),
-    examples,
-    difficulty: fields.difficulty || fields.level || 'Principiante',
-    tags,
-    favorite: fields.favorite ?? false,
-    source: fields.source || 'manual', // 'manual' | 'ai'
-    createdAt: fields.createdAt || today(),
-    dateLearned: fields.dateLearned || today(),
-  };
-}

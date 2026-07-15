@@ -40,29 +40,41 @@ api.interceptors.response.use(
 // ──────────────────────────────────────────────
 
 export const authAPI = {
-  login: (credentials) => api.post('/auth/login', credentials),
-  register: (userData) => api.post('/auth/register', userData),
-  me: () => api.get('/auth/me'),
-  updateProfile: (data) => api.put('/auth/profile', data),
+  login:         (credentials) => api.post('/auth/login', credentials),
+  register:      (userData)    => api.post('/auth/register', userData),
+  me:            ()            => api.get('/auth/me'),
+  updateProfile: (data)        => api.put('/auth/profile', data),
+  logout:        ()            => api.post('/auth/logout'),
 };
 
-export const chatAPI = {
-  getConversations: () => api.get('/chat/conversations'),
-  getMessages: (conversationId) => api.get(`/chat/conversations/${conversationId}/messages`),
-  sendMessage: (conversationId, message) => api.post(`/chat/conversations/${conversationId}/messages`, { message }),
-  createConversation: () => api.post('/chat/conversations'),
-};
+
 
 export const grammarAPI = {
-  getAll: () => api.get('/grammar'),
-  getById: (id) => api.get(`/grammar/${id}`),
-  toggleFavorite: (id) => api.put(`/grammar/${id}/favorite`),
+  getAll:         ()        => api.get(`/grammar`),
+  getById:        (id)      => api.get(`/grammar/${id}`),
+  create:         (data)    => api.post(`/grammar`, data),
+  update:         (id, data)=> api.put(`/grammar/${id}`, data),
+  remove:         (id)      => api.delete(`/grammar/${id}`),
+  toggleFavorite: (id)      => api.put(`/grammar/${id}/favorite`),
 };
 
 export const vocabularyAPI = {
-  getAll: () => api.get('/vocabulary'),
-  getById: (id) => api.get(`/vocabulary/${id}`),
-  toggleFavorite: (id) => api.put(`/vocabulary/${id}/favorite`),
+  getAll:         ()        => api.get(`/vocabulary`),
+  getById:        (id)      => api.get(`/vocabulary/${id}`),
+  create:         (data)    => api.post(`/vocabulary`, data),
+  update:         (id, data)=> api.put(`/vocabulary/${id}`, data),
+  remove:         (id)      => api.delete(`/vocabulary/${id}`),
+  toggleFavorite: (id)      => api.put(`/vocabulary/${id}/favorite`),
+};
+
+export const chatAPI = {
+  getConversations:  ()                   => api.get('/chat/conversations'),
+  createConversation:(data = {})          => api.post('/chat/conversations', data),
+  getMessages:       (conversationId)     => api.get(`/chat/conversations/${conversationId}/messages`),
+  updateConversation:(id, data)           => api.put(`/chat/conversations/${id}`, data),
+  deleteConversation:(id)                 => api.delete(`/chat/conversations/${id}`),
+  sendMessage:       (formData)           => api.post('/chat', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  sendVoiceMessage:  (formData)           => api.post('/chat/voice', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
 };
 
 export const statsAPI = {

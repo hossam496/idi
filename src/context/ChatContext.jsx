@@ -1,245 +1,310 @@
+/**
+ * ChatContext — migrated to backend API.
+ * All messages and conversations now live in MongoDB via the backend.
+ * Gemini is called server-side — no API key needed in the frontend.
+ */
+
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { useAuth } from './AuthContext';
+import { useAuth }     from './AuthContext';
 import { useLearning } from './LearningContext';
-import { loadUserData, saveUserData } from '../services/storage';
-import { sendMessage as sendGeminiMessage } from '../services/gemini';
-import { extractGrammar, saveGrammar } from '../utils/extractGrammar';
+import { chatAPI }     from '../services/api';
 
 const ChatContext = createContext(null);
 
-// Default welcome chat for brand-new users
-function createDefaultChats() {
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** Normalise a backend message into the shape the UI expects. */
+function normaliseMessage(msg) {
   return {
-    chats: [
-      {
-        id: 'chat_1',
-        title: 'Conversazione iniziale',
-        date: new Date().toISOString().split('T')[0],
-        preview: 'Ciao! Come posso aiutarti oggi?'
-      }
-    ],
-    messages: {
-      'chat_1': [
-        {
-          id: 'msg_0',
-          sender: 'ai',
-          text: 'Ciao! Sono il tuo tutor IDI alimentato da Intelligenza Artificiale. Come va il tuo apprendimento dell\'italiano oggi?',
-          translation: 'مرحباً! أنا معلم معهد IDI المدعوم بالذكاء الاصطناعي. كيف حال تعلمك للغة الإيطالية اليوم؟',
-          timestamp: '12:00',
-          extractedVocab: {
-            italianWord: 'Apprendimento',
-            arabicTranslation: 'التعلم / عملية التعلم',
-            pronunciation: 'أب-برين-دي-مين-تو',
-            example: 'L\'apprendimento di una nuova lingua richiede pazienza.',
-            partOfSpeech: 'Sostantivo'
-          }
-        }
-      ]
-    }
+    id:               msg.id || msg._id,
+    sender:           msg.role === 'ai' ? 'ai' : 'user',
+    text:             msg.message,
+    translation:      msg.translation  ?? null,
+    extractedVocab:   msg.extractedVocab   ?? null,
+    extractedGrammar: msg.extractedGrammar ?? null,
+    timestamp: msg.createdAt
+      ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
   };
 }
 
+/** Normalise a backend conversation into the shape the sidebar expects. */
+function normaliseConversation(conv) {
+  return {
+    id:      conv.id || conv._id,
+    title:   conv.title   || 'Nuova conversazione',
+    preview: conv.preview || '',
+    date:    conv.updatedAt
+      ? new Date(conv.updatedAt).toISOString().split('T')[0]
+      : new Date().toISOString().split('T')[0],
+  };
+}
+
+// ── Provider ──────────────────────────────────────────────────────────────────
+
 export const ChatProvider = ({ children }) => {
-  const { user } = useAuth();
-  const { addVocabularyItem, addGrammarItem, incrementConversations } = useLearning();
+  const { isAuthenticated }                  = useAuth();
+  const { addGrammarItem, addVocabularyItem, incrementConversations } = useLearning();
 
-  const [chats, setChats] = useState([]);
-  const [allMessages, setAllMessages] = useState({});
+  const [chats,        setChats]        = useState([]);
+  const [allMessages,  setAllMessages]  = useState({});   // { [conversationId]: Message[] }
   const [activeChatId, setActiveChatId] = useState(null);
-  const [isTyping, setIsTyping] = useState(false);
-  const [isListening, setIsListening] = useState(false);
+  const [isTyping,     setIsTyping]     = useState(false);
+  const [isListening,  setIsListening]  = useState(false);
 
-  // Re-load user-specific chat data whenever the logged-in user changes
+  // ── Load conversations on mount / login ───────────────────────────────────
   useEffect(() => {
-    if (!user?.id) {
-      // User logged out — reset to empty state
+    if (!isAuthenticated) {
       setChats([]);
       setAllMessages({});
       setActiveChatId(null);
       return;
     }
+    loadConversations();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]);
 
-    // Load this user's chat data from namespaced localStorage
-    const storedChats = loadUserData(user.id, 'chat_list');
-    const storedMessages = loadUserData(user.id, 'chat_messages');
-
-    if (storedChats && storedChats.length > 0) {
-      // Existing user — restore their data
-      setChats(storedChats);
-      setAllMessages(storedMessages || {});
-      setActiveChatId(storedChats[0].id);
-    } else {
-      // Brand-new user — seed with default welcome chat
-      const defaults = createDefaultChats();
-      setChats(defaults.chats);
-      setAllMessages(defaults.messages);
-      setActiveChatId(defaults.chats[0].id);
-
-      // Persist defaults immediately
-      saveUserData(user.id, 'chat_list', defaults.chats);
-      saveUserData(user.id, 'chat_messages', defaults.messages);
-    }
-  }, [user?.id]);
-
-  // Helper to persist chats + messages for the current user
-  const saveChatsAndMessages = useCallback((newChats, newMessages) => {
-    setChats(newChats);
-    setAllMessages(newMessages);
-    if (user?.id) {
-      saveUserData(user.id, 'chat_list', newChats);
-      saveUserData(user.id, 'chat_messages', newMessages);
-    }
-  }, [user?.id]);
-
-  const startNewChat = () => {
-    const newChatId = `chat_${Date.now()}`;
-    const newChat = {
-      id: newChatId,
-      title: `Nuova conversazione`,
-      date: new Date().toISOString().split('T')[0],
-      preview: 'Inizia a digitare...'
-    };
-
-    const initialMessages = [
-      {
-        id: `msg_init_${Date.now()}`,
-        sender: 'ai',
-        text: 'Ciao! Parliamo in italiano. Dimmi qualcosa su di te o chiedimi aiuto per la grammatica.',
-        translation: 'مرحباً! دعنا نتحدث بالإيطالية. أخبرني شيئاً عن نفسك أو اطلب مني المساعدة في القواعد.',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const loadConversations = useCallback(async () => {
+    try {
+      const res  = await chatAPI.getConversations();
+      const list = (res.data.data.conversations ?? []).map(normaliseConversation);
+      setChats(list);
+      if (list.length > 0 && !activeChatId) {
+        setActiveChatId(list[0].id);
+        loadMessages(list[0].id);
       }
-    ];
+    } catch (err) {
+      console.error('Failed to load conversations:', err);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeChatId]);
 
-    const updatedChats = [newChat, ...chats];
-    const updatedMessages = {
-      ...allMessages,
-      [newChatId]: initialMessages
-    };
+  // ── Load messages for a conversation ─────────────────────────────────────
+  const loadMessages = useCallback(async (conversationId) => {
+    if (allMessages[conversationId]) return; // already cached
+    try {
+      const res  = await chatAPI.getMessages(conversationId);
+      const msgs = (res.data.data.messages ?? []).map(normaliseMessage);
+      setAllMessages(prev => ({ ...prev, [conversationId]: msgs }));
+    } catch (err) {
+      console.error('Failed to load messages:', err);
+    }
+  }, [allMessages]);
 
-    setActiveChatId(newChatId);
-    saveChatsAndMessages(updatedChats, updatedMessages);
-  };
-
-  const selectChat = (id) => {
+  // ── Select a conversation ─────────────────────────────────────────────────
+  const selectChat = useCallback((id) => {
     setActiveChatId(id);
-  };
+    loadMessages(id);
+  }, [loadMessages]);
 
-  const sendMessage = async (text) => {
+  // ── Start a new conversation ──────────────────────────────────────────────
+  const startNewChat = useCallback(async () => {
+    try {
+      const res  = await chatAPI.createConversation({ title: 'Nuova conversazione' });
+      const conv = normaliseConversation(res.data.data.conversation);
+
+      const welcomeMsg = {
+        id:          `msg_welcome_${conv.id}`,
+        sender:      'ai',
+        text:        'Ciao! Parliamo in italiano. Dimmi qualcosa su di te o chiedimi aiuto per la grammatica.',
+        translation: 'مرحباً! دعنا نتحدث بالإيطالية. أخبرني شيئاً عن نفسك أو اطلب مني المساعدة في القواعد.',
+        timestamp:   new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        extractedVocab:   null,
+        extractedGrammar: null,
+      };
+
+      setChats(prev => [conv, ...prev]);
+      setAllMessages(prev => ({ ...prev, [conv.id]: [welcomeMsg] }));
+      setActiveChatId(conv.id);
+    } catch (err) {
+      console.error('Failed to create conversation:', err);
+    }
+  }, []);
+
+  // ── Send a text message ───────────────────────────────────────────────────
+  const sendMessage = useCallback(async (text, file = null) => {
     if (!text.trim()) return;
 
     const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const userMsg = {
-      id: `msg_user_${Date.now()}`,
-      sender: 'user',
-      text: text,
-      timestamp: timeString
+
+    // 1. Optimistically show the user message
+    const tempUserMsg = {
+      id:               `temp_user_${Date.now()}`,
+      sender:           'user',
+      text,
+      translation:      null,
+      extractedVocab:   null,
+      extractedGrammar: null,
+      timestamp:        timeString,
     };
 
-    const chatMsgs = allMessages[activeChatId] || [];
-    const updatedChatMsgs = [...chatMsgs, userMsg];
+    const currentMsgs = allMessages[activeChatId] || [];
+    setAllMessages(prev => ({
+      ...prev,
+      [activeChatId]: [...currentMsgs, tempUserMsg],
+    }));
 
-    // Update the preview in the chats list
-    const updatedChats = chats.map(c =>
-      c.id === activeChatId ? { ...c, preview: text.slice(0, 40) + (text.length > 40 ? '...' : '') } : c
-    );
+    // Update sidebar preview
+    setChats(prev => prev.map(c =>
+      c.id === activeChatId
+        ? { ...c, preview: text.slice(0, 40) + (text.length > 40 ? '...' : '') }
+        : c
+    ));
 
-    const newMessages = {
-      ...allMessages,
-      [activeChatId]: updatedChatMsgs
-    };
-
-    saveChatsAndMessages(updatedChats, newMessages);
     setIsTyping(true);
 
     try {
-      // Call Gemini API passing userMsg text and previous conversation history
-      const responseText = await sendGeminiMessage(text, chatMsgs);
+      // 2. Build FormData (supports optional file attachment)
+      const formData = new FormData();
+      formData.append('message', text);
+      formData.append('conversationId', activeChatId);
+      if (file) formData.append('file', file);
 
-      // Parse the JSON output from Gemini
-      const responseData = JSON.parse(responseText);
+      // 3. Call backend — Gemini runs server-side
+      const res  = await chatAPI.sendMessage(formData);
+      const data = res.data.data;
 
+      // 4. Build AI message from response
       const aiMsg = {
-        id: `msg_ai_${Date.now()}`,
-        sender: 'ai',
-        text: responseData.text,
-        translation: responseData.translation,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        extractedVocab: responseData.extractedVocab && responseData.extractedVocab.italianWord ? responseData.extractedVocab : null,
-        extractedGrammar: responseData.extractedGrammar && responseData.extractedGrammar.title ? responseData.extractedGrammar : null
+        id:               data.aiMessage?.id || `ai_${Date.now()}`,
+        sender:           'ai',
+        text:             data.italianText,
+        translation:      data.arabicTranslation,
+        extractedVocab:   data.extractedVocab   ?? null,
+        extractedGrammar: data.extractedGrammar ?? null,
+        timestamp:        new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
 
-      const finalMsgs = [...updatedChatMsgs, aiMsg];
-      const finalMessagesObj = {
-        ...allMessages,
-        [activeChatId]: finalMsgs
-      };
+      // 5. Replace temp user message with the real one from server + add AI reply
+      const realUserMsg = data.userMessage
+        ? normaliseMessage(data.userMessage)
+        : { ...tempUserMsg, id: `user_${Date.now()}` };
 
-      // Auto rename chat title if it was default
-      const currentChat = chats.find(c => c.id === activeChatId);
-      let finalChats = updatedChats;
-      if (currentChat && currentChat.title === 'Nuova conversazione') {
-        finalChats = updatedChats.map(c =>
-          c.id === activeChatId ? { ...c, title: text.slice(0, 20) + (text.length > 20 ? '...' : '') } : c
-        );
+      setAllMessages(prev => ({
+        ...prev,
+        [activeChatId]: [...currentMsgs, realUserMsg, aiMsg],
+      }));
+
+      // 6. Auto-rename conversation if it still has the default title
+      const activeChat = chats.find(c => c.id === activeChatId);
+      if (activeChat?.title === 'Nuova conversazione') {
+        const newTitle = text.slice(0, 30) + (text.length > 30 ? '...' : '');
+        setChats(prev => prev.map(c =>
+          c.id === activeChatId ? { ...c, title: newTitle } : c
+        ));
       }
 
-      saveChatsAndMessages(finalChats, finalMessagesObj);
+      // 7. Update stats (conversations counter)
       incrementConversations();
 
-      // Auto-extract and save grammar rule from response without user interaction
-      if (user?.id) {
-        const extracted = extractGrammar(responseText);
-        if (extracted) {
-          saveGrammar(user.id, extracted);
-        }
-      }
-    } catch (error) {
-      console.error("Failed to fetch response from Gemini:", error);
-
-      // Create a user-friendly system message bubble indicating the error
-      const errorMsg = {
-        id: `msg_error_${Date.now()}`,
-        sender: 'ai',
-        text: error.message || "Si è verificato un errore imprevisto. Riprova più tardi.",
-        translation: "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى لاحقاً.",
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    } catch (err) {
+      console.error('Chat error:', err);
+      const errMsg = {
+        id:          `err_${Date.now()}`,
+        sender:      'ai',
+        text:        err.response?.data?.message || 'Si è verificato un errore. Riprova più tardi.',
+        translation: 'حدث خطأ. يرجى المحاولة مرة أخرى لاحقاً.',
+        timestamp:   new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        extractedVocab:   null,
+        extractedGrammar: null,
       };
-
-      const finalMsgs = [...updatedChatMsgs, errorMsg];
-      const finalMessagesObj = {
-        ...allMessages,
-        [activeChatId]: finalMsgs
-      };
-
-      saveChatsAndMessages(chats, finalMessagesObj);
+      setAllMessages(prev => ({
+        ...prev,
+        [activeChatId]: [...currentMsgs, tempUserMsg, errMsg],
+      }));
     } finally {
       setIsTyping(false);
     }
-  };
+  }, [activeChatId, allMessages, chats, incrementConversations]);
 
-  const toggleListening = () => {
-    setIsListening(prev => !prev);
-    // Simulate voice detection trigger
-    if (!isListening) {
-      setTimeout(() => {
-        setIsListening(false);
-        // Automatically insert a voice-to-text simulation in the chat box later
-      }, 3000);
+  // ── Send a voice message ──────────────────────────────────────────────────
+  const sendVoiceMessage = useCallback(async (audioBlob) => {
+    setIsTyping(true);
+    try {
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'voice.webm');
+      formData.append('conversationId', activeChatId);
+
+      const res  = await chatAPI.sendVoiceMessage(formData);
+      const data = res.data.data;
+
+      const userMsg = {
+        id:               data.userMessage?.id || `user_${Date.now()}`,
+        sender:           'user',
+        text:             data.transcript,
+        translation:      null,
+        extractedVocab:   null,
+        extractedGrammar: null,
+        timestamp:        new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+
+      const aiMsg = {
+        id:               data.aiMessage?.id || `ai_${Date.now()}`,
+        sender:           'ai',
+        text:             data.italianText,
+        translation:      data.arabicTranslation,
+        extractedVocab:   data.extractedVocab   ?? null,
+        extractedGrammar: data.extractedGrammar ?? null,
+        timestamp:        new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+
+      const currentMsgs = allMessages[activeChatId] || [];
+      setAllMessages(prev => ({
+        ...prev,
+        [activeChatId]: [...currentMsgs, userMsg, aiMsg],
+      }));
+
+      incrementConversations();
+    } catch (err) {
+      console.error('Voice error:', err);
+    } finally {
+      setIsTyping(false);
+      setIsListening(false);
     }
-  };
+  }, [activeChatId, allMessages, incrementConversations]);
+
+  // ── Toggle voice listening ────────────────────────────────────────────────
+  const toggleListening = useCallback(() => {
+    setIsListening(prev => !prev);
+  }, []);
+
+  // ── Delete a conversation ─────────────────────────────────────────────────
+  const deleteChat = useCallback(async (id) => {
+    try {
+      await chatAPI.deleteConversation(id);
+      setChats(prev => {
+        const remaining = prev.filter(c => c.id !== id);
+        if (activeChatId === id) {
+          setActiveChatId(remaining[0]?.id ?? null);
+          if (remaining[0]) loadMessages(remaining[0].id);
+        }
+        return remaining;
+      });
+      setAllMessages(prev => {
+        const copy = { ...prev };
+        delete copy[id];
+        return copy;
+      });
+    } catch (err) {
+      console.error('Failed to delete conversation:', err);
+    }
+  }, [activeChatId, loadMessages]);
 
   return (
     <ChatContext.Provider
       value={{
         chats,
         activeChatId,
-        messages: allMessages[activeChatId] || [],
+        messages:     allMessages[activeChatId] || [],
         isTyping,
         isListening,
         startNewChat,
         selectChat,
         sendMessage,
-        toggleListening
+        sendVoiceMessage,
+        toggleListening,
+        deleteChat,
+        loadConversations,
       }}
     >
       {children}
@@ -248,9 +313,7 @@ export const ChatProvider = ({ children }) => {
 };
 
 export const useChat = () => {
-  const context = useContext(ChatContext);
-  if (!context) {
-    throw new Error('useChat deve essere utilizzato all\'interno di un ChatProvider');
-  }
-  return context;
+  const ctx = useContext(ChatContext);
+  if (!ctx) throw new Error('useChat deve essere utilizzato all\'interno di un ChatProvider');
+  return ctx;
 };
