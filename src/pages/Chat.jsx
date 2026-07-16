@@ -344,7 +344,7 @@ const Chat = () => {
                               <span className="text-[10px] font-bold uppercase tracking-wider text-brand-green">🇮🇹 Italian</span>
                             </div>
                           )}
-                          <p className="leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                          <p className="leading-relaxed whitespace-pre-wrap break-words">{msg.text}</p>
 
                           {isAi && msg.translation && isPredominantlyArabic(msg.translation) && (
                             <div className="mt-3 pt-3 border-t border-brand-border/60">
