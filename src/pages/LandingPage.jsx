@@ -692,7 +692,7 @@ ${message}
                 </div>
                 <div className="flex items-center space-x-3 text-brand-navy text-sm font-medium">
                   <FiPhone className="text-brand-green" size={18} />
-                  <span>01038382640</span>
+                  <span>+201038382640</span>
                 </div>
               </div>
             </div>
@@ -827,7 +827,7 @@ ${message}
                 </li>
                 <li className="flex items-center gap-2">
                   <FiPhone size={13} className="text-brand-green shrink-0" />
-                  <span>01038382640</span>
+                  <span>+201038382640</span>
                 </li>
               </ul>
             </div>

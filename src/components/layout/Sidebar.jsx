@@ -36,9 +36,12 @@ const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
 
   return (
     <>
-      <aside className="w-72 bg-brand-surface border-r border-brand-border flex flex-col justify-between shrink-0 self-stretch">
+      <aside
+        className="w-72 bg-brand-surface border-r border-brand-border flex flex-col justify-between shrink-0"
+        style={{ height: '100%', overflow: 'hidden' }}
+      >
         {/* Top: scrollable content */}
-        <div className="flex flex-col flex-1 overflow-y-auto p-4 space-y-6 min-h-0">
+        <div className="flex flex-col flex-1 p-4 space-y-6" style={{ overflowY: 'auto', minHeight: 0 }}>
           {/* New Chat Button */}
           <Button 
             onClick={handleNewChat} 

@@ -242,10 +242,14 @@ const Chat = () => {
       />
 
       {/* Main chat window */}
-      <div className="flex-1 flex overflow-hidden max-w-7xl w-full mx-auto bg-brand-surface border-x border-b border-brand-border h-[calc(100vh-80px)] relative">
-
-        {/* Desktop Sidebar — self-stretch fills the full height, internal scroll only */}
-        <div className="hidden lg:flex self-stretch shrink-0"><Sidebar /></div>
+      <div
+        className="flex-1 flex max-w-7xl w-full mx-auto bg-brand-surface border-x border-b border-brand-border relative"
+        style={{ height: 'calc(100vh - 80px)', overflow: 'hidden' }}
+      >
+        {/* Desktop Sidebar — fixed height, never scrolls with chat */}
+        <div className="hidden lg:flex shrink-0" style={{ height: '100%' }}>
+          <Sidebar />
+        </div>
 
         {/* Mobile Sidebar */}
         <AnimatePresence>
@@ -274,7 +278,7 @@ const Chat = () => {
         </AnimatePresence>
 
         {/* Chat Area */}
-        <div className="flex-grow flex flex-col justify-between h-full bg-brand-cream/15 relative">
+        <div className="flex-1 flex flex-col bg-brand-cream/15 relative" style={{ height: '100%', overflow: 'hidden' }}>
 
           {/* Header */}
           <div className="px-6 py-4 border-b border-brand-border bg-brand-surface flex items-center justify-between">
@@ -296,7 +300,7 @@ const Chat = () => {
           </div>
 
           {/* Messages stream */}
-          <div className="flex-1 overflow-y-auto px-6 py-8 space-y-6">
+          <div className="flex-1 px-6 py-8 space-y-6" style={{ overflowY: 'auto', minHeight: 0 }}>
 
             {messages.length === 1 && messages[0].sender === 'ai' && (
               <div className="max-w-2xl mx-auto mb-8 space-y-6">
