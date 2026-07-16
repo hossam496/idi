@@ -192,6 +192,16 @@ const Chat = () => {
     { text: 'Spiegami la differenza tra essere e avere al passato.', label: 'Grammatica: Passato 📚' },
   ];
 
+  /**
+   * Checks if a string is predominantly Arabic.
+   * Returns true if more than 40% of its characters are Arabic script.
+   */
+  function isPredominantlyArabic(str) {
+    if (!str) return false;
+    const arabicChars = (str.match(/[\u0600-\u06FF]/g) || []).length;
+    return arabicChars / str.length > 0.25;
+  }
+
   const isSending = isTyping;
 
   return (
@@ -336,7 +346,7 @@ const Chat = () => {
                           )}
                           <p className="leading-relaxed whitespace-pre-wrap">{msg.text}</p>
 
-                          {isAi && msg.translation && (
+                          {isAi && msg.translation && isPredominantlyArabic(msg.translation) && (
                             <div className="mt-3 pt-3 border-t border-brand-border/60">
                               <div className="bg-brand-navy/[0.03] rounded-xl p-3">
                                 <div className="flex items-center space-x-1.5 mb-1.5">
