@@ -73,8 +73,15 @@ export const chatAPI = {
   getMessages:       (conversationId)     => api.get(`/chat/conversations/${conversationId}/messages`),
   updateConversation:(id, data)           => api.put(`/chat/conversations/${id}`, data),
   deleteConversation:(id)                 => api.delete(`/chat/conversations/${id}`),
-  sendMessage:       (formData)           => api.post('/chat', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
-  sendVoiceMessage:  (formData)           => api.post('/chat/voice', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  sendMessage: (formData, onUploadProgress) =>
+    api.post('/chat', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: onUploadProgress
+        ? (e) => onUploadProgress(Math.round((e.loaded * 100) / (e.total || 1)))
+        : undefined,
+    }),
+  sendVoiceMessage: (formData) =>
+    api.post('/chat/voice', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
 };
 
 export const statsAPI = {

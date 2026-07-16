@@ -19,9 +19,10 @@ function normaliseMessage(msg) {
     id:               msg.id || msg._id,
     sender:           msg.role === 'ai' ? 'ai' : 'user',
     text:             msg.message,
-    translation:      msg.translation  ?? null,
+    translation:      msg.translation      ?? null,
     extractedVocab:   msg.extractedVocab   ?? null,
     extractedGrammar: msg.extractedGrammar ?? null,
+    fileAttachment:   msg.fileAttachment   ?? null,
     timestamp: msg.createdAt
       ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -46,11 +47,12 @@ export const ChatProvider = ({ children }) => {
   const { isAuthenticated }                  = useAuth();
   const { addGrammarItem, addVocabularyItem, incrementConversations } = useLearning();
 
-  const [chats,        setChats]        = useState([]);
-  const [allMessages,  setAllMessages]  = useState({});   // { [conversationId]: Message[] }
-  const [activeChatId, setActiveChatId] = useState(null);
-  const [isTyping,     setIsTyping]     = useState(false);
-  const [isListening,  setIsListening]  = useState(false);
+  const [chats,          setChats]          = useState([]);
+  const [allMessages,    setAllMessages]    = useState({});
+  const [activeChatId,   setActiveChatId]   = useState(null);
+  const [isTyping,       setIsTyping]       = useState(false);
+  const [isListening,    setIsListening]    = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   // ── Load conversations on mount / login ───────────────────────────────────
   useEffect(() => {
@@ -121,53 +123,50 @@ export const ChatProvider = ({ children }) => {
     }
   }, []);
 
-  // ── Send a text message ───────────────────────────────────────────────────
   const sendMessage = useCallback(async (text, file = null) => {
-    if (!text.trim()) return;
+    if (!text.trim() && !file) return;
 
     const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    // 1. Optimistically show the user message
+    // 1. Optimistic user message (with optional attachment preview)
     const tempUserMsg = {
       id:               `temp_user_${Date.now()}`,
       sender:           'user',
-      text,
+      text:             text || '',
       translation:      null,
       extractedVocab:   null,
       extractedGrammar: null,
-      timestamp:        timeString,
+      fileAttachment:   file
+        ? { originalName: file.name, mimeType: file.type, size: file.size }
+        : null,
+      timestamp: timeString,
     };
 
     const currentMsgs = allMessages[activeChatId] || [];
-    setAllMessages(prev => ({
-      ...prev,
-      [activeChatId]: [...currentMsgs, tempUserMsg],
-    }));
-
-    // Update sidebar preview
+    setAllMessages(prev => ({ ...prev, [activeChatId]: [...currentMsgs, tempUserMsg] }));
     setChats(prev => prev.map(c =>
       c.id === activeChatId
-        ? { ...c, preview: text.slice(0, 40) + (text.length > 40 ? '...' : '') }
+        ? { ...c, preview: (text || file?.name || '').slice(0, 40) }
         : c
     ));
 
     setIsTyping(true);
+    setUploadProgress(0);
 
     try {
-      // 2. Build FormData (supports optional file attachment)
+      // 2. Build FormData
       const formData = new FormData();
-      formData.append('message', text);
-      // Only append conversationId when it's a real MongoDB ObjectId — never append null/undefined
+      if (text.trim()) formData.append('message', text);
+      else formData.append('message', file ? `[File: ${file.name}]` : '');
       if (activeChatId && activeChatId !== 'null') {
         formData.append('conversationId', activeChatId);
       }
       if (file) formData.append('file', file);
 
-      // 3. Call backend — Gemini runs server-side
-      const res  = await chatAPI.sendMessage(formData);
+      // 3. Call backend with upload progress tracking
+      const res = await chatAPI.sendMessage(formData, (pct) => setUploadProgress(pct));
       const data = res.data.data;
 
-      // 4. Build AI message from response
       const aiMsg = {
         id:               data.aiMessage?.id || `ai_${Date.now()}`,
         sender:           'ai',
@@ -175,10 +174,10 @@ export const ChatProvider = ({ children }) => {
         translation:      data.arabicTranslation,
         extractedVocab:   data.extractedVocab   ?? null,
         extractedGrammar: data.extractedGrammar ?? null,
+        fileAttachment:   null,
         timestamp:        new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
 
-      // 5. Replace temp user message with the real one from server + add AI reply
       const realUserMsg = data.userMessage
         ? normaliseMessage(data.userMessage)
         : { ...tempUserMsg, id: `user_${Date.now()}` };
@@ -188,28 +187,26 @@ export const ChatProvider = ({ children }) => {
         [activeChatId]: [...currentMsgs, realUserMsg, aiMsg],
       }));
 
-      // 6. Auto-rename conversation if it still has the default title
       const activeChat = chats.find(c => c.id === activeChatId);
       if (activeChat?.title === 'Nuova conversazione') {
-        const newTitle = text.slice(0, 30) + (text.length > 30 ? '...' : '');
+        const newTitle = (text || file?.name || 'File').slice(0, 30);
         setChats(prev => prev.map(c =>
           c.id === activeChatId ? { ...c, title: newTitle } : c
         ));
       }
 
-      // 7. Update stats (conversations counter)
       incrementConversations();
-
     } catch (err) {
       console.error('Chat error:', err);
       const errMsg = {
-        id:          `err_${Date.now()}`,
-        sender:      'ai',
-        text:        err.response?.data?.message || 'Si è verificato un errore. Riprova più tardi.',
-        translation: 'حدث خطأ. يرجى المحاولة مرة أخرى لاحقاً.',
-        timestamp:   new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        id:               `err_${Date.now()}`,
+        sender:           'ai',
+        text:             err.response?.data?.message || 'Si è verificato un errore. Riprova più tardi.',
+        translation:      'حدث خطأ. يرجى المحاولة مرة أخرى لاحقاً.',
+        timestamp:        timeString,
         extractedVocab:   null,
         extractedGrammar: null,
+        fileAttachment:   null,
       };
       setAllMessages(prev => ({
         ...prev,
@@ -217,6 +214,7 @@ export const ChatProvider = ({ children }) => {
       }));
     } finally {
       setIsTyping(false);
+      setUploadProgress(0);
     }
   }, [activeChatId, allMessages, chats, incrementConversations]);
 
@@ -304,6 +302,7 @@ export const ChatProvider = ({ children }) => {
         messages:     allMessages[activeChatId] || [],
         isTyping,
         isListening,
+        uploadProgress,
         startNewChat,
         selectChat,
         sendMessage,
