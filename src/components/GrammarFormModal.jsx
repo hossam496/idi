@@ -157,7 +157,9 @@ const GrammarFormModal = ({ isOpen, onClose, onSave, initial }) => {
       arabicExplanation:  form.arabicExplanation.trim(),
       examples:           form.examples.filter(ex => ex.it.trim()),
       difficulty:         form.difficulty,
-      tags:               form.tags,
+      tags:               form.tags
+                            ? form.tags.split(',').map(t => t.trim()).filter(Boolean)
+                            : [],
       favorite:           form.favorite,
       // preserve original source when editing
       ...(isEditing ? { source: initial.source } : { source: 'manual' }),
