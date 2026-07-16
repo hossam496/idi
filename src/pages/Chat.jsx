@@ -244,8 +244,8 @@ const Chat = () => {
       {/* Main chat window */}
       <div className="flex-1 flex overflow-hidden max-w-7xl w-full mx-auto bg-brand-surface border-x border-b border-brand-border h-[calc(100vh-80px)] relative">
 
-        {/* Desktop Sidebar */}
-        <div className="hidden lg:flex h-full shrink-0"><Sidebar /></div>
+        {/* Desktop Sidebar — self-stretch fills the full height, internal scroll only */}
+        <div className="hidden lg:flex self-stretch shrink-0"><Sidebar /></div>
 
         {/* Mobile Sidebar */}
         <AnimatePresence>
