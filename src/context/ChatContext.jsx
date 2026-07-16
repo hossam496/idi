@@ -157,7 +157,10 @@ export const ChatProvider = ({ children }) => {
       // 2. Build FormData (supports optional file attachment)
       const formData = new FormData();
       formData.append('message', text);
-      formData.append('conversationId', activeChatId);
+      // Only append conversationId when it's a real MongoDB ObjectId — never append null/undefined
+      if (activeChatId && activeChatId !== 'null') {
+        formData.append('conversationId', activeChatId);
+      }
       if (file) formData.append('file', file);
 
       // 3. Call backend — Gemini runs server-side
@@ -223,7 +226,10 @@ export const ChatProvider = ({ children }) => {
     try {
       const formData = new FormData();
       formData.append('audio', audioBlob, 'voice.webm');
-      formData.append('conversationId', activeChatId);
+      // Only append conversationId when it's a real MongoDB ObjectId
+      if (activeChatId && activeChatId !== 'null') {
+        formData.append('conversationId', activeChatId);
+      }
 
       const res  = await chatAPI.sendVoiceMessage(formData);
       const data = res.data.data;
