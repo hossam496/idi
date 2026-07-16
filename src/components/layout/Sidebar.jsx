@@ -36,9 +36,9 @@ const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
 
   return (
     <>
-      <aside className={`w-72 bg-brand-surface border-r border-brand-border h-full flex flex-col justify-between shrink-0`}>
+      <aside className="w-72 bg-brand-surface border-r border-brand-border h-full flex flex-col justify-between shrink-0 sticky top-0">
         {/* Top Actions & Chat History */}
-        <div className="flex flex-col flex-1 overflow-y-auto p-4 space-y-6">
+        <div className="flex flex-col flex-1 overflow-y-auto p-4 space-y-6 min-h-0">
           {/* New Chat Button */}
           <Button 
             onClick={handleNewChat} 

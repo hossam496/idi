@@ -245,7 +245,7 @@ const Chat = () => {
       <div className="flex-1 flex overflow-hidden max-w-7xl w-full mx-auto bg-brand-surface border-x border-b border-brand-border h-[calc(100vh-80px)] relative">
 
         {/* Desktop Sidebar */}
-        <div className="hidden lg:block h-full"><Sidebar /></div>
+        <div className="hidden lg:flex h-full shrink-0"><Sidebar /></div>
 
         {/* Mobile Sidebar */}
         <AnimatePresence>
