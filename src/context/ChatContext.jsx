@@ -1,10 +1,19 @@
 /**
  * ChatContext — migrated to backend API.
  * All messages and conversations now live in MongoDB via the backend.
- * Gemini is called server-side — no API key needed in the frontend.
+ * Groq AI is called server-side — no API key needed in the frontend.
+ *
+ * Reliability additions:
+ *   - isSendingRef  : prevents duplicate in-flight requests (double-click, React StrictMode)
+ *   - 429 handling  : reads error.retryAfter / error.friendlyIt / error.friendlyAr
+ *                     set by the Axios interceptor in api.js
+ *   - 503 handling  : friendly bilingual message
  */
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, {
+  createContext, useContext, useState, useEffect,
+  useCallback, useRef,
+} from 'react';
 import { useAuth }     from './AuthContext';
 import { useLearning } from './LearningContext';
 import { chatAPI }     from '../services/api';
@@ -41,10 +50,49 @@ function normaliseConversation(conv) {
   };
 }
 
+/**
+ * Build a friendly AI error message object from a caught Axios error.
+ * The Axios 429 interceptor in api.js pre-fills error.friendlyIt / friendlyAr / retryAfter.
+ */
+function buildErrorMessage(err, fallbackTimestamp) {
+  const status      = err.response?.status;
+  const serverMsg   = err.response?.data?.message;
+
+  // 429 — interceptor already built a friendly message
+  if (status === 429 || err.retryAfter) {
+    return {
+      itText: err.friendlyIt ?? `⏳ Troppe richieste. Riprova tra ${err.retryAfter ?? 60} secondi.`,
+      arText: err.friendlyAr ?? `⏳ طلبات كثيرة. أعد المحاولة بعد ${err.retryAfter ?? 60} ثانية.`,
+    };
+  }
+
+  // 503 — AI service down
+  if (status === 503) {
+    return {
+      itText: '🔌 Il servizio AI non è disponibile al momento. Riprova tra poco.',
+      arText: '🔌 خدمة الذكاء الاصطناعي غير متاحة حالياً. حاول مرة أخرى بعد قليل.',
+    };
+  }
+
+  // 403
+  if (status === 403) {
+    return {
+      itText: '🚫 Accesso al servizio AI negato.',
+      arText: '🚫 تم رفض الوصول إلى خدمة الذكاء الاصطناعي.',
+    };
+  }
+
+  // Generic
+  return {
+    itText: serverMsg || 'Si è verificato un errore. Riprova più tardi.',
+    arText: 'حدث خطأ. يرجى المحاولة مرة أخرى لاحقاً.',
+  };
+}
+
 // ── Provider ──────────────────────────────────────────────────────────────────
 
 export const ChatProvider = ({ children }) => {
-  const { isAuthenticated }                  = useAuth();
+  const { isAuthenticated }                              = useAuth();
   const { addGrammarItem, addVocabularyItem, incrementConversations } = useLearning();
 
   const [chats,          setChats]          = useState([]);
@@ -53,6 +101,9 @@ export const ChatProvider = ({ children }) => {
   const [isTyping,       setIsTyping]       = useState(false);
   const [isListening,    setIsListening]    = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+
+  // Prevents duplicate in-flight requests (double-click, React StrictMode double-invoke)
+  const isSendingRef = useRef(false);
 
   // ── Load conversations on mount / login ───────────────────────────────────
   useEffect(() => {
@@ -106,11 +157,11 @@ export const ChatProvider = ({ children }) => {
       const conv = normaliseConversation(res.data.data.conversation);
 
       const welcomeMsg = {
-        id:          `msg_welcome_${conv.id}`,
-        sender:      'ai',
-        text:        'Ciao! Parliamo in italiano. Dimmi qualcosa su di te o chiedimi aiuto per la grammatica.',
-        translation: 'مرحباً! دعنا نتحدث بالإيطالية. أخبرني شيئاً عن نفسك أو اطلب مني المساعدة في القواعد.',
-        timestamp:   new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        id:               `msg_welcome_${conv.id}`,
+        sender:           'ai',
+        text:             'Ciao! Parliamo in italiano. Dimmi qualcosa su di te o chiedimi aiuto per la grammatica.',
+        translation:      'مرحباً! دعنا نتحدث بالإيطالية. أخبرني شيئاً عن نفسك أو اطلب مني المساعدة في القواعد.',
+        timestamp:        new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         extractedVocab:   null,
         extractedGrammar: null,
       };
@@ -123,12 +174,18 @@ export const ChatProvider = ({ children }) => {
     }
   }, []);
 
+  // ── Send a text / file message ────────────────────────────────────────────
   const sendMessage = useCallback(async (text, file = null) => {
-    if (!text.trim() && !file) return;
+    if (!text?.trim() && !file) return;
 
-    const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    // ── In-flight guard — ignore duplicate clicks ─────────────────────────
+    if (isSendingRef.current) return;
+    isSendingRef.current = true;
 
-    // 1. Optimistic user message (with optional attachment preview)
+    const timeString  = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const currentMsgs = allMessages[activeChatId] || [];
+
+    // Optimistic user message
     const tempUserMsg = {
       id:               `temp_user_${Date.now()}`,
       sender:           'user',
@@ -142,7 +199,6 @@ export const ChatProvider = ({ children }) => {
       timestamp: timeString,
     };
 
-    const currentMsgs = allMessages[activeChatId] || [];
     setAllMessages(prev => ({ ...prev, [activeChatId]: [...currentMsgs, tempUserMsg] }));
     setChats(prev => prev.map(c =>
       c.id === activeChatId
@@ -154,18 +210,19 @@ export const ChatProvider = ({ children }) => {
     setUploadProgress(0);
 
     try {
-      // 2. Build FormData
       const formData = new FormData();
-      if (text.trim()) formData.append('message', text);
-      else formData.append('message', file ? `[File: ${file.name}]` : '');
+      formData.append('message', text?.trim() ? text : (file ? `[File: ${file.name}]` : ''));
       if (activeChatId && activeChatId !== 'null') {
         formData.append('conversationId', activeChatId);
       }
       if (file) formData.append('file', file);
 
-      // 3. Call backend with upload progress tracking
-      const res = await chatAPI.sendMessage(formData, (pct) => setUploadProgress(pct));
+      const res  = await chatAPI.sendMessage(formData, (pct) => setUploadProgress(pct));
       const data = res.data.data;
+
+      const realUserMsg = data.userMessage
+        ? normaliseMessage(data.userMessage)
+        : { ...tempUserMsg, id: `user_${Date.now()}` };
 
       const aiMsg = {
         id:               data.aiMessage?.id || `ai_${Date.now()}`,
@@ -177,10 +234,6 @@ export const ChatProvider = ({ children }) => {
         fileAttachment:   null,
         timestamp:        new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
-
-      const realUserMsg = data.userMessage
-        ? normaliseMessage(data.userMessage)
-        : { ...tempUserMsg, id: `user_${Date.now()}` };
 
       setAllMessages(prev => ({
         ...prev,
@@ -196,50 +249,47 @@ export const ChatProvider = ({ children }) => {
       }
 
       incrementConversations();
+
     } catch (err) {
       console.error('Chat error:', err);
-      const status = err.response?.status;
-      const serverMsg = err.response?.data?.message;
+      const { itText, arText } = buildErrorMessage(err, timeString);
 
-      let itText, arText;
-      if (status === 429) {
-        itText = '⏳ Troppe richieste al servizio AI. Attendi qualche secondo e riprova.';
-        arText = '⏳ طلبات كثيرة جداً. انتظر بضع ثوانٍ ثم حاول مرة أخرى.';
-      } else if (status === 503) {
-        itText = '🔌 Il servizio AI non è disponibile al momento. Riprova tra poco.';
-        arText = '🔌 خدمة الذكاء الاصطناعي غير متاحة حالياً. حاول مرة أخرى بعد قليل.';
-      } else {
-        itText = serverMsg || 'Si è verificato un errore. Riprova più tardi.';
-        arText = 'حدث خطأ. يرجى المحاولة مرة أخرى لاحقاً.';
-      }
-
-      const errMsg = {
-        id:               `err_${Date.now()}`,
-        sender:           'ai',
-        text:             itText,
-        translation:      arText,
-        timestamp:        timeString,
-        extractedVocab:   null,
-        extractedGrammar: null,
-        fileAttachment:   null,
-      };
       setAllMessages(prev => ({
         ...prev,
-        [activeChatId]: [...currentMsgs, tempUserMsg, errMsg],
+        [activeChatId]: [
+          ...currentMsgs,
+          tempUserMsg,
+          {
+            id:               `err_${Date.now()}`,
+            sender:           'ai',
+            text:             itText,
+            translation:      arText,
+            timestamp:        timeString,
+            extractedVocab:   null,
+            extractedGrammar: null,
+            fileAttachment:   null,
+          },
+        ],
       }));
     } finally {
       setIsTyping(false);
       setUploadProgress(0);
+      isSendingRef.current = false;   // unlock for next message
     }
   }, [activeChatId, allMessages, chats, incrementConversations]);
 
   // ── Send a voice message ──────────────────────────────────────────────────
   const sendVoiceMessage = useCallback(async (audioBlob) => {
+    if (isSendingRef.current) return;
+    isSendingRef.current = true;
+
     setIsTyping(true);
+    const timeString  = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const currentMsgs = allMessages[activeChatId] || [];
+
     try {
       const formData = new FormData();
       formData.append('audio', audioBlob, 'voice.webm');
-      // Only append conversationId when it's a real MongoDB ObjectId
       if (activeChatId && activeChatId !== 'null') {
         formData.append('conversationId', activeChatId);
       }
@@ -254,7 +304,7 @@ export const ChatProvider = ({ children }) => {
         translation:      null,
         extractedVocab:   null,
         extractedGrammar: null,
-        timestamp:        new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        timestamp:        timeString,
       };
 
       const aiMsg = {
@@ -267,43 +317,37 @@ export const ChatProvider = ({ children }) => {
         timestamp:        new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
 
-      const currentMsgs = allMessages[activeChatId] || [];
       setAllMessages(prev => ({
         ...prev,
         [activeChatId]: [...currentMsgs, userMsg, aiMsg],
       }));
 
       incrementConversations();
+
     } catch (err) {
       console.error('Voice error:', err);
-      const status = err.response?.status;
-      const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const currentMsgs = allMessages[activeChatId] || [];
-
-      let itText, arText;
-      if (status === 429) {
-        itText = '⏳ Troppe richieste al servizio AI. Attendi qualche secondo e riprova.';
-        arText = '⏳ طلبات كثيرة جداً. انتظر بضع ثوانٍ ثم حاول مرة أخرى.';
-      } else if (status === 503) {
-        itText = '🔌 Il servizio AI non è disponibile al momento. Riprova tra poco.';
-        arText = '🔌 خدمة الذكاء الاصطناعي غير متاحة حالياً. حاول مرة أخرى بعد قليل.';
-      } else {
-        itText = err.response?.data?.message || 'Si è verificato un errore con il messaggio vocale.';
-        arText = 'حدث خطأ في الرسالة الصوتية. حاول مرة أخرى.';
-      }
+      const { itText, arText } = buildErrorMessage(err, timeString);
 
       setAllMessages(prev => ({
         ...prev,
-        [activeChatId]: [...currentMsgs, {
-          id: `err_${Date.now()}`, sender: 'ai',
-          text: itText, translation: arText,
-          timestamp: timeString,
-          extractedVocab: null, extractedGrammar: null, fileAttachment: null,
-        }],
+        [activeChatId]: [
+          ...currentMsgs,
+          {
+            id:               `err_${Date.now()}`,
+            sender:           'ai',
+            text:             itText,
+            translation:      arText,
+            timestamp:        timeString,
+            extractedVocab:   null,
+            extractedGrammar: null,
+            fileAttachment:   null,
+          },
+        ],
       }));
     } finally {
       setIsTyping(false);
       setIsListening(false);
+      isSendingRef.current = false;
     }
   }, [activeChatId, allMessages, incrementConversations]);
 
@@ -339,10 +383,11 @@ export const ChatProvider = ({ children }) => {
       value={{
         chats,
         activeChatId,
-        messages:     allMessages[activeChatId] || [],
+        messages:      allMessages[activeChatId] || [],
         isTyping,
         isListening,
         uploadProgress,
+        isSending:     isSendingRef,   // expose ref so UI can disable the send button
         startNewChat,
         selectChat,
         sendMessage,
@@ -359,6 +404,6 @@ export const ChatProvider = ({ children }) => {
 
 export const useChat = () => {
   const ctx = useContext(ChatContext);
-  if (!ctx) throw new Error('useChat deve essere utilizzato all\'interno di un ChatProvider');
+  if (!ctx) throw new Error("useChat deve essere utilizzato all'interno di un ChatProvider");
   return ctx;
 };
