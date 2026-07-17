@@ -74,10 +74,18 @@ export const remove = async (id) => {
 };
 
 /**
- * Toggle the favorite flag on a grammar item.
- * @param {string} id
- * @returns {Promise<{ ok: boolean, item?: object }>}
+ * Delete ALL grammar items for the authenticated user.
+ * @returns {Promise<{ ok: boolean }>}
  */
+export const removeAll = async () => {
+  try {
+    await grammarAPI.removeAll();
+    return { ok: true };
+  } catch (err) {
+    const message = err.response?.data?.message || 'Errore durante l\'eliminazione.';
+    return { ok: false, error: message };
+  }
+};
 export const toggleFavorite = async (id) => {
   try {
     const res = await grammarAPI.toggleFavorite(id);

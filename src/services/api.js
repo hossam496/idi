@@ -55,6 +55,7 @@ export const grammarAPI = {
   create:         (data)    => api.post(`/grammar`, data),
   update:         (id, data)=> api.put(`/grammar/${id}`, data),
   remove:         (id)      => api.delete(`/grammar/${id}`),
+  removeAll:      ()        => api.delete(`/grammar`),
   toggleFavorite: (id)      => api.put(`/grammar/${id}/favorite`),
 };
 

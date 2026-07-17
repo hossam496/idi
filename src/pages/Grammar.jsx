@@ -5,7 +5,7 @@ import Card from '../components/common/Card';
 import Badge from '../components/common/Badge';
 import Button from '../components/common/Button';
 import GrammarFormModal from '../components/GrammarFormModal';
-import { FiSearch, FiHeart, FiBookOpen, FiDownload, FiTrash2, FiEdit2, FiPlus, FiCalendar, FiTag } from 'react-icons/fi';
+import { FiSearch, FiHeart, FiBookOpen, FiTrash2, FiEdit2, FiPlus, FiCalendar, FiTag } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -151,14 +151,15 @@ const Grammar = () => {
     createGrammarItem,
     updateGrammarItem,
     deleteGrammarItem,
-    seedDemoData,
-    clearAllData,
+    deleteAllGrammarItems,
   } = useLearning();
 
   const [searchQuery,      setSearchQuery]      = useState('');
   const [difficultyFilter, setDifficultyFilter] = useState('all');
   const [favoriteFilter,   setFavoriteFilter]   = useState(false);
   const [sortBy,           setSortBy]           = useState('newest');
+  const [deletingAll,      setDeletingAll]      = useState(false);
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
 
   // Modal state
   const [modalOpen,    setModalOpen]    = useState(false);
@@ -171,6 +172,13 @@ const Grammar = () => {
   const handleSave = (fields) => {
     if (editingItem) return updateGrammarItem(editingItem.id, fields);
     return createGrammarItem(fields);
+  };
+
+  const handleDeleteAll = async () => {
+    setDeletingAll(true);
+    await deleteAllGrammarItems();
+    setDeletingAll(false);
+    setConfirmDeleteAll(false);
   };
 
   // Filter + sort
@@ -215,14 +223,34 @@ const Grammar = () => {
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            {grammarList.length === 0 ? (
-              <Button variant="outline" size="sm" onClick={seedDemoData} className="space-x-1.5">
-                <FiDownload size={14} /><span>Carica Demo</span>
-              </Button>
-            ) : (
-              <Button variant="ghost" size="sm" onClick={clearAllData} className="text-brand-red hover:bg-brand-red/5 space-x-1.5">
-                <FiTrash2 size={14} /><span>Cancella Tutto</span>
-              </Button>
+            {grammarList.length > 0 && (
+              confirmDeleteAll ? (
+                <div className="flex items-center gap-2 bg-brand-red/8 border border-brand-red/20 rounded-xl px-3 py-2">
+                  <span className="text-[11px] text-brand-red font-semibold">Eliminare tutto?</span>
+                  <button
+                    onClick={handleDeleteAll}
+                    disabled={deletingAll}
+                    className="text-[11px] bg-brand-red text-white px-2.5 py-1 rounded-lg font-bold hover:bg-[#b02222] transition-colors cursor-pointer disabled:opacity-60"
+                  >
+                    {deletingAll ? '...' : 'Sì'}
+                  </button>
+                  <button
+                    onClick={() => setConfirmDeleteAll(false)}
+                    className="text-[11px] text-brand-navy/60 hover:text-brand-navy px-1.5 py-1 cursor-pointer font-semibold"
+                  >
+                    No
+                  </button>
+                </div>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setConfirmDeleteAll(true)}
+                  className="text-brand-red hover:bg-brand-red/5 space-x-1.5"
+                >
+                  <FiTrash2 size={14} /><span>Cancella Tutto</span>
+                </Button>
+              )
             )}
             <Button variant="primary" size="sm" onClick={openAdd} className="space-x-1.5">
               <FiPlus size={14} /><span>Aggiungi Regola</span>

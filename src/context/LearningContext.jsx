@@ -118,6 +118,16 @@ export const LearningProvider = ({ children }) => {
     return result;
   }, [refreshStats]);
 
+  /** Delete ALL grammar rules */
+  const deleteAllGrammarItems = useCallback(async () => {
+    const result = await grammarService.removeAll();
+    if (result.ok) {
+      setGrammarList([]);
+      refreshStats();
+    }
+    return result;
+  }, [refreshStats]);
+
   /** Toggle favorite */
   const toggleFavoriteGrammar = useCallback(async (id) => {
     const result = await grammarService.toggleFavorite(id);
@@ -203,6 +213,7 @@ export const LearningProvider = ({ children }) => {
         createGrammarItem,
         updateGrammarItem,
         deleteGrammarItem,
+        deleteAllGrammarItems,
         toggleFavoriteGrammar,
 
         // Vocabulary
