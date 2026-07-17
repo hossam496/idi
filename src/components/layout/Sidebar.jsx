@@ -38,7 +38,7 @@ const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
     <>
       <aside
         className="w-72 bg-brand-surface border-r border-brand-border flex flex-col justify-between shrink-0"
-        style={{ height: '100%', overflow: 'hidden' }}
+        style={{ height: '100%', overflow: 'hidden', minHeight: 0 }}
       >
         {/* Top: scrollable content */}
         <div className="flex flex-col flex-1 p-4 space-y-6" style={{ overflowY: 'auto', minHeight: 0 }}>

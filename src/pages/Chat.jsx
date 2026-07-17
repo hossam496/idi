@@ -206,7 +206,8 @@ const Chat = () => {
 
   return (
     <div
-      className="bg-brand-cream min-h-screen flex flex-col font-sans"
+      className="flex flex-col font-sans bg-brand-cream"
+      style={{ height: '100vh', overflow: 'hidden' }}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
@@ -243,10 +244,10 @@ const Chat = () => {
 
       {/* Main chat window */}
       <div
-        className="flex-1 flex max-w-7xl w-full mx-auto bg-brand-surface border-x border-b border-brand-border relative"
-        style={{ height: 'calc(100vh - 80px)', overflow: 'hidden' }}
+        className="flex flex-1 w-full max-w-7xl mx-auto bg-brand-surface border-x border-brand-border"
+        style={{ overflow: 'hidden', minHeight: 0 }}
       >
-        {/* Desktop Sidebar — fixed height, never scrolls with chat */}
+        {/* Desktop Sidebar */}
         <div className="hidden lg:flex shrink-0" style={{ height: '100%' }}>
           <Sidebar />
         </div>
@@ -278,7 +279,7 @@ const Chat = () => {
         </AnimatePresence>
 
         {/* Chat Area */}
-        <div className="flex-1 flex flex-col bg-brand-cream/15 relative" style={{ height: '100%', overflow: 'hidden' }}>
+        <div className="flex flex-col flex-1" style={{ minHeight: 0, overflow: 'hidden' }}>
 
           {/* Header */}
           <div className="px-6 py-4 border-b border-brand-border bg-brand-surface flex items-center justify-between">
