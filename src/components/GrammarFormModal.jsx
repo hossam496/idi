@@ -153,8 +153,8 @@ const GrammarFormModal = ({ isOpen, onClose, onSave, initial }) => {
       ...(isEditing ? { id: initial.id } : {}),
       title:              form.title.trim(),
       arabicTitle:        form.arabicTitle.trim(),
-      italianExplanation: form.italianExplanation.trim(),
-      arabicExplanation:  form.arabicExplanation.trim(),
+      explanationItalian: form.italianExplanation.trim(),
+      explanationArabic:  form.arabicExplanation.trim(),
       examples:           form.examples.filter(ex => ex.it.trim()),
       difficulty:         form.difficulty,
       tags:               form.tags
