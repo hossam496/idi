@@ -198,11 +198,26 @@ export const ChatProvider = ({ children }) => {
       incrementConversations();
     } catch (err) {
       console.error('Chat error:', err);
+      const status = err.response?.status;
+      const serverMsg = err.response?.data?.message;
+
+      let itText, arText;
+      if (status === 429) {
+        itText = '⏳ Troppe richieste al servizio AI. Attendi qualche secondo e riprova.';
+        arText = '⏳ طلبات كثيرة جداً. انتظر بضع ثوانٍ ثم حاول مرة أخرى.';
+      } else if (status === 503) {
+        itText = '🔌 Il servizio AI non è disponibile al momento. Riprova tra poco.';
+        arText = '🔌 خدمة الذكاء الاصطناعي غير متاحة حالياً. حاول مرة أخرى بعد قليل.';
+      } else {
+        itText = serverMsg || 'Si è verificato un errore. Riprova più tardi.';
+        arText = 'حدث خطأ. يرجى المحاولة مرة أخرى لاحقاً.';
+      }
+
       const errMsg = {
         id:               `err_${Date.now()}`,
         sender:           'ai',
-        text:             err.response?.data?.message || 'Si è verificato un errore. Riprova più tardi.',
-        translation:      'حدث خطأ. يرجى المحاولة مرة أخرى لاحقاً.',
+        text:             itText,
+        translation:      arText,
         timestamp:        timeString,
         extractedVocab:   null,
         extractedGrammar: null,
@@ -261,6 +276,31 @@ export const ChatProvider = ({ children }) => {
       incrementConversations();
     } catch (err) {
       console.error('Voice error:', err);
+      const status = err.response?.status;
+      const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const currentMsgs = allMessages[activeChatId] || [];
+
+      let itText, arText;
+      if (status === 429) {
+        itText = '⏳ Troppe richieste al servizio AI. Attendi qualche secondo e riprova.';
+        arText = '⏳ طلبات كثيرة جداً. انتظر بضع ثوانٍ ثم حاول مرة أخرى.';
+      } else if (status === 503) {
+        itText = '🔌 Il servizio AI non è disponibile al momento. Riprova tra poco.';
+        arText = '🔌 خدمة الذكاء الاصطناعي غير متاحة حالياً. حاول مرة أخرى بعد قليل.';
+      } else {
+        itText = err.response?.data?.message || 'Si è verificato un errore con il messaggio vocale.';
+        arText = 'حدث خطأ في الرسالة الصوتية. حاول مرة أخرى.';
+      }
+
+      setAllMessages(prev => ({
+        ...prev,
+        [activeChatId]: [...currentMsgs, {
+          id: `err_${Date.now()}`, sender: 'ai',
+          text: itText, translation: arText,
+          timestamp: timeString,
+          extractedVocab: null, extractedGrammar: null, fileAttachment: null,
+        }],
+      }));
     } finally {
       setIsTyping(false);
       setIsListening(false);
