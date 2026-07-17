@@ -65,6 +65,7 @@ export const vocabularyAPI = {
   create:         (data)    => api.post(`/vocabulary`, data),
   update:         (id, data)=> api.put(`/vocabulary/${id}`, data),
   remove:         (id)      => api.delete(`/vocabulary/${id}`),
+  removeAll:      ()        => api.delete(`/vocabulary`),
   toggleFavorite: (id)      => api.put(`/vocabulary/${id}/favorite`),
 };
 

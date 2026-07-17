@@ -178,6 +178,16 @@ export const LearningProvider = ({ children }) => {
     return result;
   }, [refreshStats]);
 
+  /** Delete ALL vocabulary items */
+  const deleteAllVocabularyItems = useCallback(async () => {
+    const result = await vocabularyService.removeAll();
+    if (result.ok) {
+      setVocabularyList([]);
+      refreshStats();
+    }
+    return result;
+  }, [refreshStats]);
+
   /** Toggle favorite */
   const toggleFavoriteVocabulary = useCallback(async (id) => {
     const result = await vocabularyService.toggleFavorite(id);
@@ -221,6 +231,7 @@ export const LearningProvider = ({ children }) => {
         createVocabularyItem,
         updateVocabularyItem,
         deleteVocabularyItem,
+        deleteAllVocabularyItems,
         toggleFavoriteVocabulary,
 
         // Misc

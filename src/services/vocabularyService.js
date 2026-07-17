@@ -74,6 +74,20 @@ export const remove = async (id) => {
 };
 
 /**
+ * Delete ALL vocabulary items for the authenticated user.
+ * @returns {Promise<{ ok: boolean }>}
+ */
+export const removeAll = async () => {
+  try {
+    await vocabularyAPI.removeAll();
+    return { ok: true };
+  } catch (err) {
+    const message = err.response?.data?.message || 'Errore durante l\'eliminazione.';
+    return { ok: false, error: message };
+  }
+};
+
+/**
  * Toggle the favorite flag on a vocabulary item.
  * @param {string} id
  * @returns {Promise<{ ok: boolean, item?: object }>}

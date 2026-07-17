@@ -229,14 +229,15 @@ const Vocabulary = () => {
     createVocabularyItem,
     updateVocabularyItem,
     deleteVocabularyItem,
-    seedDemoData,
-    clearAllData,
+    deleteAllVocabularyItems,
   } = useLearning();
 
   const [searchQuery,    setSearchQuery]    = useState('');
   const [posFilter,      setPosFilter]      = useState('all');
   const [favoriteFilter, setFavoriteFilter] = useState(false);
   const [sortBy,         setSortBy]         = useState('newest');
+  const [deletingAll,    setDeletingAll]    = useState(false);
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
 
   // Modal state
   const [modalOpen,   setModalOpen]   = useState(false);
@@ -249,6 +250,51 @@ const Vocabulary = () => {
   const handleSave = (fields) => {
     if (editingItem) return updateVocabularyItem(editingItem.id, fields);
     return createVocabularyItem(fields);
+  };
+
+  const handleDeleteAll = async () => {
+    setDeletingAll(true);
+    await deleteAllVocabularyItems();
+    setDeletingAll(false);
+    setConfirmDeleteAll(false);
+  };
+
+  const seedDemoData = async () => {
+    const demos = [
+      {
+        italianWord: 'mangiare',
+        arabicTranslation: 'يأكل',
+        pronunciation: 'man-JA-re',
+        partOfSpeech: 'Verbo',
+        example: 'Mi piace mangiare la pizza.',
+        arabicExample: 'أحب أكل البيتزا.',
+        source: 'manual',
+        favorite: false,
+      },
+      {
+        italianWord: 'bellissimo',
+        arabicTranslation: 'جميل جداً',
+        pronunciation: 'bel-LIS-si-mo',
+        partOfSpeech: 'Aggettivo',
+        example: 'Che panorama bellissimo!',
+        arabicExample: 'يا له من منظر جميل!',
+        source: 'manual',
+        favorite: false,
+      },
+      {
+        italianWord: 'purtroppo',
+        arabicTranslation: 'للأسف',
+        pronunciation: 'pur-TROP-po',
+        partOfSpeech: 'Avverbio',
+        example: 'Purtroppo non posso venire.',
+        arabicExample: 'للأسف لا أستطيع الحضور.',
+        source: 'manual',
+        favorite: false,
+      },
+    ];
+    for (const demo of demos) {
+      await createVocabularyItem(demo);
+    }
   };
 
   // Filter + sort
@@ -293,9 +339,28 @@ const Vocabulary = () => {
                 <FiDownload size={14} /><span>Carica Demo</span>
               </Button>
             ) : (
-              <Button variant="ghost" size="sm" onClick={clearAllData} className="text-brand-red hover:bg-brand-red/5 space-x-1.5">
-                <FiTrash2 size={14} /><span>Cancella Tutto</span>
-              </Button>
+              confirmDeleteAll ? (
+                <div className="flex items-center gap-2 bg-brand-red/8 border border-brand-red/20 rounded-xl px-3 py-2">
+                  <span className="text-[11px] text-brand-red font-semibold">Eliminare tutto?</span>
+                  <button
+                    onClick={handleDeleteAll}
+                    disabled={deletingAll}
+                    className="text-[11px] bg-brand-red text-white px-2.5 py-1 rounded-lg font-bold hover:bg-[#b02222] transition-colors cursor-pointer disabled:opacity-60"
+                  >
+                    {deletingAll ? '...' : 'Sì'}
+                  </button>
+                  <button
+                    onClick={() => setConfirmDeleteAll(false)}
+                    className="text-[11px] text-brand-navy/60 hover:text-brand-navy px-1.5 py-1 cursor-pointer font-semibold"
+                  >
+                    No
+                  </button>
+                </div>
+              ) : (
+                <Button variant="ghost" size="sm" onClick={() => setConfirmDeleteAll(true)} className="text-brand-red hover:bg-brand-red/5 space-x-1.5">
+                  <FiTrash2 size={14} /><span>Cancella Tutto</span>
+                </Button>
+              )
             )}
             <Button variant="primary" size="sm" onClick={openAdd} className="space-x-1.5">
               <FiPlus size={14} /><span>Aggiungi Parola</span>
