@@ -38,6 +38,7 @@ export const create = async (fields) => {
     return { ok: true, item: res.data.data.grammar };
   } catch (err) {
     const message = err.response?.data?.message || 'Errore durante il salvataggio.';
+    console.error('[grammarService.create] 400 error:', message, '| payload:', JSON.stringify(fields));
     return { ok: false, error: message };
   }
 };
