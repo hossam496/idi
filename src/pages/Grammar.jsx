@@ -174,6 +174,56 @@ const Grammar = () => {
     return createGrammarItem(fields);
   };
 
+  const seedDemoData = async () => {
+    const demos = [
+      {
+        title: 'Presente Indicativo',
+        arabicTitle: 'المضارع الإخباري',
+        difficulty: 'Principiante',
+        explanationItalian: 'Il presente indicativo esprime azioni che accadono ora o abitualmente.',
+        explanationArabic: 'يُعبّر عن أفعال تحدث الآن أو بشكل اعتيادي.',
+        examples: [
+          { it: 'Io mangio la pizza.', ar: 'أنا آكل البيتزا.' },
+          { it: 'Lei studia italiano ogni giorno.', ar: 'هي تدرس الإيطالية كل يوم.' },
+        ],
+        tags: ['verbi', 'presente'],
+        source: 'manual',
+        favorite: false,
+      },
+      {
+        title: 'Passato Prossimo',
+        arabicTitle: 'الماضي القريب',
+        difficulty: 'Intermedio',
+        explanationItalian: 'Il passato prossimo indica un\'azione completata nel passato recente.',
+        explanationArabic: 'يدل على فعل اكتمل في الماضي القريب.',
+        examples: [
+          { it: 'Ho mangiato la pizza ieri.', ar: 'أكلت البيتزا أمس.' },
+          { it: 'Siamo andati al cinema.', ar: 'ذهبنا إلى السينما.' },
+        ],
+        tags: ['verbi', 'passato'],
+        source: 'manual',
+        favorite: false,
+      },
+      {
+        title: 'Congiuntivo Presente',
+        arabicTitle: 'المضارع الشرطي',
+        difficulty: 'Avanzato',
+        explanationItalian: 'Il congiuntivo si usa per esprimere dubbio, opinione o desiderio.',
+        explanationArabic: 'يُستخدم للتعبير عن الشك أو الرأي أو الرغبة.',
+        examples: [
+          { it: 'Penso che lui abbia ragione.', ar: 'أعتقد أنه على حق.' },
+          { it: 'Voglio che tu venga con me.', ar: 'أريدك أن تأتي معي.' },
+        ],
+        tags: ['congiuntivo', 'avanzato'],
+        source: 'manual',
+        favorite: false,
+      },
+    ];
+    for (const demo of demos) {
+      await createGrammarItem(demo);
+    }
+  };
+
   const handleDeleteAll = async () => {
     setDeletingAll(true);
     await deleteAllGrammarItems();
