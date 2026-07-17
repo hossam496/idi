@@ -211,7 +211,9 @@ export const ChatProvider = ({ children }) => {
 
     try {
       const formData = new FormData();
-      formData.append('message', text?.trim() ? text : (file ? `[File: ${file.name}]` : ''));
+      // message is required by the validator — always send at least a placeholder
+      const msgText = text?.trim() || (file ? `[File: ${file.name}]` : '(empty)');
+      formData.append('message', msgText);
       if (activeChatId && activeChatId !== 'null') {
         formData.append('conversationId', activeChatId);
       }
