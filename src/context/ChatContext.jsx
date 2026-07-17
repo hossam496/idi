@@ -99,7 +99,6 @@ export const ChatProvider = ({ children }) => {
   const [allMessages,    setAllMessages]    = useState({});
   const [activeChatId,   setActiveChatId]   = useState(null);
   const [isTyping,       setIsTyping]       = useState(false);
-  const [isListening,    setIsListening]    = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
   // Prevents duplicate in-flight requests (double-click, React StrictMode double-invoke)
@@ -280,84 +279,6 @@ export const ChatProvider = ({ children }) => {
     }
   }, [activeChatId, allMessages, chats, incrementConversations]);
 
-  // ── Send a voice message ──────────────────────────────────────────────────
-  const sendVoiceMessage = useCallback(async (audioBlob) => {
-    if (isSendingRef.current) return;
-    isSendingRef.current = true;
-
-    setIsTyping(true);
-    const timeString  = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const currentMsgs = allMessages[activeChatId] || [];
-
-    try {
-      const formData = new FormData();
-      formData.append('audio', audioBlob, 'voice.webm');
-      if (activeChatId && activeChatId !== 'null') {
-        formData.append('conversationId', activeChatId);
-      }
-
-      const res  = await chatAPI.sendVoiceMessage(formData);
-      const data = res.data.data;
-
-      const userMsg = {
-        id:               data.userMessage?.id || `user_${Date.now()}`,
-        sender:           'user',
-        text:             data.transcript,
-        translation:      null,
-        extractedVocab:   null,
-        extractedGrammar: null,
-        timestamp:        timeString,
-      };
-
-      const aiMsg = {
-        id:               data.aiMessage?.id || `ai_${Date.now()}`,
-        sender:           'ai',
-        text:             data.italianText,
-        translation:      data.arabicTranslation,
-        extractedVocab:   data.extractedVocab   ?? null,
-        extractedGrammar: data.extractedGrammar ?? null,
-        timestamp:        new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      };
-
-      setAllMessages(prev => ({
-        ...prev,
-        [activeChatId]: [...currentMsgs, userMsg, aiMsg],
-      }));
-
-      incrementConversations();
-
-    } catch (err) {
-      console.error('Voice error:', err);
-      const { itText, arText } = buildErrorMessage(err, timeString);
-
-      setAllMessages(prev => ({
-        ...prev,
-        [activeChatId]: [
-          ...currentMsgs,
-          {
-            id:               `err_${Date.now()}`,
-            sender:           'ai',
-            text:             itText,
-            translation:      arText,
-            timestamp:        timeString,
-            extractedVocab:   null,
-            extractedGrammar: null,
-            fileAttachment:   null,
-          },
-        ],
-      }));
-    } finally {
-      setIsTyping(false);
-      setIsListening(false);
-      isSendingRef.current = false;
-    }
-  }, [activeChatId, allMessages, incrementConversations]);
-
-  // ── Toggle voice listening ────────────────────────────────────────────────
-  const toggleListening = useCallback(() => {
-    setIsListening(prev => !prev);
-  }, []);
-
   // ── Delete a conversation ─────────────────────────────────────────────────
   const deleteChat = useCallback(async (id) => {
     try {
@@ -387,14 +308,11 @@ export const ChatProvider = ({ children }) => {
         activeChatId,
         messages:      allMessages[activeChatId] || [],
         isTyping,
-        isListening,
         uploadProgress,
-        isSending:     isSendingRef,   // expose ref so UI can disable the send button
+        isSending:     isSendingRef,
         startNewChat,
         selectChat,
         sendMessage,
-        sendVoiceMessage,
-        toggleListening,
         deleteChat,
         loadConversations,
       }}

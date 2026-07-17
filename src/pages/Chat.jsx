@@ -7,7 +7,7 @@ import Button from '../components/common/Button';
 import Card from '../components/common/Card';
 import Badge from '../components/common/Badge';
 import {
-  FiSend, FiMic, FiVolume2, FiPlus, FiBookOpen, FiBookmark,
+  FiSend, FiVolume2, FiPlus, FiBookOpen, FiBookmark,
   FiMenu, FiX, FiCheck, FiCopy, FiPaperclip, FiFile, FiFileText,
 } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -76,8 +76,8 @@ function AttachmentChip({ attachment }) {
 
 const Chat = () => {
   const {
-    messages, isTyping, isListening,
-    sendMessage, toggleListening, startNewChat,
+    messages, isTyping,
+    sendMessage, startNewChat,
     uploadProgress,
   } = useChat();
 
@@ -450,27 +450,6 @@ const Chat = () => {
             </div>
           </div>
 
-          {/* Listening overlay */}
-          <AnimatePresence>
-            {isListening && (
-              <motion.div
-                initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 15 }}
-                className="absolute inset-x-6 bottom-24 bg-brand-navy text-white p-4 rounded-2xl flex items-center justify-between shadow-premium z-20"
-              >
-                <div className="flex items-center space-x-3">
-                  <span className="relative flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-red opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-brand-red"></span>
-                  </span>
-                  <span className="text-xs font-semibold tracking-wide">Sto ascoltando... Parla in italiano! / تكلّم بالإيطالية</span>
-                </div>
-                <button onClick={toggleListening} className="text-white/60 hover:text-white text-xs font-bold uppercase tracking-wider px-3 py-1 bg-white/10 hover:bg-white/20 rounded-lg cursor-pointer">
-                  Annulla
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
           {/* Input area */}
           <div className="p-4 border-t border-brand-border bg-brand-surface">
 
@@ -521,21 +500,6 @@ const Chat = () => {
             {/* Input row */}
             <form onSubmit={handleSend} className="max-w-3xl mx-auto flex items-center space-x-2">
 
-              {/* Voice button */}
-              <button
-                type="button"
-                onClick={toggleListening}
-                disabled={isSending}
-                className={`p-3.5 rounded-full border transition-all cursor-pointer hover:shadow-soft flex items-center justify-center shrink-0 ${
-                  isListening
-                    ? 'bg-brand-red text-white border-brand-red animate-pulse'
-                    : 'bg-brand-cream text-brand-navy border-brand-border hover:bg-brand-navy/5'
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
-                aria-label="Registra voce"
-              >
-                <FiMic size={18} />
-              </button>
-
               {/* Attachment button */}
               <button
                 type="button"
@@ -559,7 +523,7 @@ const Chat = () => {
                 onChange={(e) => setInputVal(e.target.value)}
                 placeholder={selectedFile ? 'Aggiungi un messaggio (opzionale)...' : 'Scrivi un messaggio in italiano o arabo...'}
                 className="flex-1 px-5 py-3 border border-brand-border bg-brand-cream/30 hover:bg-brand-cream/10 rounded-full font-sans text-sm focus:outline-none focus:ring-2 focus:ring-brand-green/30 focus:border-brand-green text-brand-navy"
-                disabled={isListening || isSending}
+                disabled={isSending}
               />
 
               {/* Send button */}
