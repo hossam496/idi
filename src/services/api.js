@@ -53,6 +53,12 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
+    // ── 409 — duplicate (expected) — suppress console noise ──────────────────
+    // The service layer handles duplicates silently; no UI error needed.
+    if (status === 409) {
+      return Promise.reject(error); // pass through without logging
+    }
+
     // ── 429 — rate limit (backend limiter OR Groq) ────────────────────────────
     if (status === 429) {
       // Parse Retry-After from header (seconds) or body

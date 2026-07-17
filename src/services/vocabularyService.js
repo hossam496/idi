@@ -37,8 +37,12 @@ export const create = async (fields) => {
     const res = await vocabularyAPI.create(fields);
     return { ok: true, item: res.data.data.vocabulary };
   } catch (err) {
+    const status  = err.response?.status;
     const message = err.response?.data?.message || 'Errore durante il salvataggio.';
-    console.error('[vocabularyService.create] 400 error:', message, '| payload:', JSON.stringify(fields));
+    // 409 = duplicate word — expected, not an error
+    if (status !== 409) {
+      console.error('[vocabularyService.create] error:', status, message);
+    }
     return { ok: false, error: message };
   }
 };
